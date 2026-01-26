@@ -1,4 +1,4 @@
-package org.lgp;
+package org.lgp.Resource;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
