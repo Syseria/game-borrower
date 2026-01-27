@@ -1,6 +1,16 @@
 # game-borrower
 ## Running the application in dev mode
 
+Because we are connecting to a `Firebase Emulator` we need to run the following command to start the `firebase-local` container.
+
+```shell script
+# Position yourself in the firebase-env folder
+cd firebase-env
+
+# Start the compose
+docker compose --env-file ../.env up --build
+```
+
 You can run your application in dev mode that enables live coding using:
 
 ```shell script
@@ -48,14 +58,40 @@ You can then execute your native executable with: `./target/game-borrower-1.0.0-
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
 
-## Related Guides
-
-- REST ([guide](https://quarkus.io/guides/rest)): A Jakarta REST implementation utilizing build time processing and Vert.x. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it.
-
 ## Provided Code
 
 ### REST
+You can access endpoints with [curl](https://curl.se/docs/tutorial.html).
 
-Easily start your REST Web Services
+##### Simulating a web login mechanism
+*NB. Create a `login.json` file with the following content to simplify the commands.*
+*{"email": "test@example.com","password": "password123","returnSecureToken": true}*
+```shell
+curl -v -X POST 'http://localhost:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key' \
+  -H "Content-Type: application/json" \
+  --data-binary "@login.json" \
+  > token.json
+```
 
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+##### Logging in
+```shell
+curl -v -X POST 'http://localhost:8080/auth/login' \
+  -H "Content-Type: application/json" \
+  --data-binary "@token.json" \
+  -c cookie-jar.txt
+```
+
+##### Logging out
+```shell
+curl -v -X POST 'http://localhost:8080/auth/logout' \
+  -H "Content-Type: application/json" \
+  -b cookie-jar.txt
+```
+
+##### General route calling
+`curl [OPTIONS] [URL]`
+```shell
+# Here is a simple request to the personal profile of a user
+# (requires to be logged in hence the cookie)
+curl -v -X GET http://localhost:8080/user/me -b cookie-jar.txt
+```
