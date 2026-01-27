@@ -1,0 +1,13 @@
+services:
+  firebase-emulator:
+    build: .
+    container_name: firebase-local
+    ports:
+      - "9099:9099"
+      - "9098:9098"
+      - "4000:4000"
+    volumes:
+      - ./firebase.json:/app/firebase.json
+      - ./data:/app/data
+    environment:
+      - GCP_PROJECT=game-borrower
