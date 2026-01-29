@@ -45,7 +45,7 @@ public class UserService {
         String uid = userRecord.getUid();
 
         try {
-            User user = new User(uid, request.name(), request.lname(), "USER");
+            User user = new User(uid, request.name(), request.lname(), request.email());
 
             ApiFuture<WriteResult> future = firestore.collection("users")
                     .document(uid)
