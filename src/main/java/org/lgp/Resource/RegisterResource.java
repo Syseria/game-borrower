@@ -13,14 +13,14 @@ import org.lgp.Service.UserService;
 
 
 @Path("/register")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
 public class RegisterResource {
 
     @Inject
     UserService userService;
 
     @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     public Response register(User.RegisterRequestDTO request) throws FirebaseAuthException {
         String uid = userService.registerUser(request);
         return Response.ok(uid).build();

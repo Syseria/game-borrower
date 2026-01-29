@@ -2,6 +2,10 @@ package org.lgp.Entity;
 
 import com.google.cloud.firestore.annotation.DocumentId;
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import org.hibernate.validator.constraints.URL;
 
 @RegisterForReflection
 public class Boardgame {
@@ -20,6 +24,57 @@ public class Boardgame {
 
     // YouTube video explaining the rules/game
     private String videoUrl;
+
+    public record BoardgameRequest(
+            @NotBlank(message = "Title is required")
+            String title,
+
+            @NotBlank(message = "Publisher is required")
+            String publisher,
+
+            @NotNull(message = "Min players is required")
+            @Min(value = 1, message = "Min players must be at least 1")
+            Integer minPlayers,
+
+            @NotNull(message = "Max players is required")
+            @Min(value = 1, message = "Max players must be at least 1")
+            Integer maxPlayers,
+
+            @NotNull(message = "Min age is required")
+            @Min(value = 0, message = "Min age cannot be negative")
+            Integer minAge,
+
+            @NotNull(message = "Min time is required")
+            @Min(value = 1, message = "Min time must be at least 1 minute")
+            Integer minTime,
+
+            @NotNull(message = "Max time is required")
+            Integer maxTime,
+
+            @NotBlank(message = "Description is required")
+            String description,
+
+            // Optional fields do not need @NotNull, but if provided, must be valid
+            @URL(message = "Image URL must be a valid URL")
+            String imageUrl,
+
+            @URL(message = "Video URL must be a valid URL")
+            String videoUrl
+    ) {}
+
+    public record BoardgameResponse(
+            String id,
+            String title,
+            String publisher,
+            Integer minPlayers,
+            Integer maxPlayers,
+            Integer minAge,
+            Integer minTime,
+            Integer maxTime,
+            String description,
+            String imageUrl,
+            String videoUrl
+    ) {}
 
     public Boardgame() {
     }
