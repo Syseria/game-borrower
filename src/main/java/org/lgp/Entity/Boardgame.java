@@ -18,7 +18,7 @@ public class Boardgame {
     private String imageUrl;
     private String description;
 
-    // Youtube video explaining the rules/game
+    // YouTube video explaining the rules/game
     private String videoUrl;
 
     public Boardgame() {

@@ -35,12 +35,10 @@ public class FirebaseAuthenticationMechanism implements HttpAuthenticationMechan
                     }
                 })
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()) // Run on worker thread
-                .onItem().transform(token -> {
-                    return (SecurityIdentity) QuarkusSecurityIdentity.builder()
-                            .setPrincipal(token::getUid)
-                            .addAttribute("email", token.getEmail())
-                            .build();
-                })
+                .onItem().transform(token -> (SecurityIdentity) QuarkusSecurityIdentity.builder()
+                        .setPrincipal(token::getUid)
+                        .addAttribute("email", token.getEmail())
+                        .build())
                 .onFailure().recoverWithNull();
     }
 

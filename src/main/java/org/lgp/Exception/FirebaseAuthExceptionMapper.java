@@ -22,7 +22,6 @@ public class FirebaseAuthExceptionMapper implements ExceptionMapper<FirebaseAuth
         Response.Status status = switch (code) {
             case ALREADY_EXISTS -> Response.Status.CONFLICT;
             case NOT_FOUND -> Response.Status.NOT_FOUND;
-            case INVALID_ARGUMENT -> Response.Status.BAD_REQUEST;
             case PERMISSION_DENIED -> Response.Status.FORBIDDEN;
             default -> Response.Status.BAD_REQUEST;
         };
