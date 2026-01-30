@@ -43,6 +43,7 @@ public class InventoryItem {
         AVAILABLE("available"),
         BORROWED("borrowed"),
         MAINTENANCE("maintenance"),
+        RETURNED("returned"),
         LOST("lost");
 
         private final String value;
