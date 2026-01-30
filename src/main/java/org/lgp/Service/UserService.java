@@ -18,10 +18,14 @@ import org.lgp.Entity.User.RegisterRequestDTO;
 import org.lgp.Entity.User.UpdateProfileRequestDTO;
 import org.lgp.Entity.User.UpdateEmailRequestDTO;
 import org.lgp.Entity.User.UpdatePasswordRequestDTO;
+import org.lgp.Entity.User.UpdateRolesRequestDTO;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -50,6 +54,13 @@ public class UserService {
 
         UserRecord userRecord = firebaseAuth.createUser(createRequest);
         String uid = userRecord.getUid();
+
+        try {
+            Map<String, Object> claims = Map.of("roles", List.of("user"));
+            firebaseAuth.setCustomUserClaims(uid, claims);
+        } catch (FirebaseAuthException e) {
+            logger.error("Failed to set default roles for user " + uid, e);
+        }
 
         try {
             User user = new User(uid, request.name(), request.lname(), request.email());
@@ -160,6 +171,40 @@ public class UserService {
             firebaseAuth.updateUser(authUpdate);
         } catch (FirebaseAuthException e) {
             throw new ServiceException("Failed to update password", e);
+        }
+    }
+
+    public void updateRoles(String uid, UpdateRolesRequestDTO request) {
+        try {
+            Set<String> safeRoles = new HashSet<>();
+
+            for (String r : request.roles()) {
+                User.Role roleEnum = User.Role.fromString(r);
+                if (roleEnum == null) {
+                    throw new IllegalArgumentException("Invalid role provided: " + r);
+                }
+                safeRoles.add(roleEnum.getValue());
+            }
+
+            DocumentSnapshot snapshot = firestore.collection(COLLECTION).document(uid).get().get();
+            if (!snapshot.exists()) {
+                throw new ResourceNotFoundException("User not found: " + uid);
+            }
+            User user = snapshot.toObject(User.class);
+
+            user.setRoles(safeRoles);
+
+            firestore.collection(COLLECTION).document(uid).set(user).get();
+
+            java.util.Map<String, Object> claims = java.util.Map.of("roles", safeRoles);
+            firebaseAuth.setCustomUserClaims(uid, claims);
+
+            logger.infof("Roles updated for user %s. New roles: %s", uid, safeRoles);
+
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(e.getMessage());
+        } catch (Exception e) {
+            throw new ServiceException("Failed to update user roles", e);
         }
     }
 

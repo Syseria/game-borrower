@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.cloud.firestore.annotation.DocumentId;
 
 import com.google.cloud.firestore.annotation.Exclude;
-import com.google.firebase.database.annotations.NotNull;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.lgp.Validation.StrongPassword;
 
@@ -94,6 +94,11 @@ public class User {
             @Size(min = 8, message = "Password must be at least 8 characters")
             @StrongPassword
             String password
+    ) {}
+
+    public record UpdateRolesRequestDTO(
+            @NotNull(message = "Roles list cannot be null")
+            Set<String> roles
     ) {}
 
     public User() {

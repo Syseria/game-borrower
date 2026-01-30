@@ -13,6 +13,8 @@ import org.lgp.Entity.User.UpdateProfileRequestDTO;
 import org.lgp.Entity.User.UpdateEmailRequestDTO;
 import org.lgp.Entity.User.UpdatePasswordRequestDTO;
 import org.lgp.Entity.User.UserProfileResponseDTO;
+import org.lgp.Entity.User.UpdateRolesRequestDTO;
+import org.lgp.Exception.ErrorResponse;
 import org.lgp.Service.UserService;
 
 import java.util.List;
@@ -97,6 +99,20 @@ public class UserResource {
         userService.updatePassword(uid, request);
         return Response.ok().build();
     }
+    @PUT
+    @Path("/{uid}/roles")
+    @RolesAllowed("admin")
+    public Response updateRoles(@PathParam("uid") String uid, @Valid UpdateRolesRequestDTO request) {
+        try {
+            userService.updateRoles(uid, request);
+            return Response.ok().build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("invalid-role", e.getMessage()))
+                    .build();
+        }
+    }
+
 
     @DELETE
     @Path("/{uid}")

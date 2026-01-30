@@ -10,8 +10,7 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.*;
 
 @ApplicationScoped
 public class FirebaseAuthenticationMechanism implements HttpAuthenticationMechanism {
@@ -34,11 +33,21 @@ public class FirebaseAuthenticationMechanism implements HttpAuthenticationMechan
                         throw new RuntimeException("Invalid Token", e);
                     }
                 })
-                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()) // Run on worker thread
-                .onItem().transform(token -> (SecurityIdentity) QuarkusSecurityIdentity.builder()
-                        .setPrincipal(token::getUid)
-                        .addAttribute("email", token.getEmail())
-                        .build())
+                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
+                .onItem().transform(token -> {
+                    List<String> roles = new ArrayList<>();
+                    Object rolesClaim = token.getClaims().get("roles");
+
+                    if (rolesClaim instanceof List<?>) {
+                        ((List<?>) rolesClaim).forEach(r -> roles.add(r.toString()));
+                    }
+
+                    return (SecurityIdentity) QuarkusSecurityIdentity.builder()
+                            .setPrincipal(token::getUid)
+                            .addAttribute("email", token.getEmail())
+                            .addRoles(new HashSet<>(roles))
+                            .build();
+                })
                 .onFailure().recoverWithNull();
     }
 
