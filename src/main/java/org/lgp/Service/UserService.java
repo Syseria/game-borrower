@@ -1,5 +1,6 @@
 package org.lgp.Service;
 
+import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
@@ -22,10 +23,8 @@ import org.lgp.Entity.User.UpdateRolesRequestDTO;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -56,7 +55,7 @@ public class UserService {
         String uid = userRecord.getUid();
 
         try {
-            Map<String, Object> claims = Map.of("roles", List.of("user"));
+            Map<String, Object> claims = Map.of("roles", List.of(User.Role.USER.getValue()));
             firebaseAuth.setCustomUserClaims(uid, claims);
         } catch (FirebaseAuthException e) {
             logger.error("Failed to set default roles for user " + uid, e);
@@ -147,12 +146,22 @@ public class UserService {
     }
 
     public void updateEmail(String uid, UpdateEmailRequestDTO request) {
+        String oldEmail = null;
         try {
+            UserRecord userRecord = firebaseAuth.getUser(uid);
+            oldEmail = userRecord.getEmail();
+
+            if (oldEmail.equalsIgnoreCase(request.email())) {
+                return;
+            }
+
             UserRecord.UpdateRequest authUpdate = new UserRecord.UpdateRequest(uid)
                     .setEmail(request.email());
             firebaseAuth.updateUser(authUpdate);
 
             firestore.collection(COLLECTION).document(uid).update("email", request.email()).get();
+
+            logger.infof("Email updated successfully for user %s", uid);
 
         } catch (FirebaseAuthException e) {
             if (e.getErrorCode().toString().equals("EMAIL_ALREADY_EXISTS")) {
@@ -160,7 +169,20 @@ public class UserService {
             }
             throw new ServiceException("Failed to update email in Auth", e);
         } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Email updated in Auth but failed to sync to Database", e);
+            logger.errorf("DB update failed for %s. Rolling back Auth email...", uid);
+
+            try {
+                UserRecord.UpdateRequest rollback = new UserRecord.UpdateRequest(uid)
+                        .setEmail(oldEmail);
+                firebaseAuth.updateUser(rollback);
+                logger.info("Rollback successful. System state restored.");
+            } catch (FirebaseAuthException rollbackEx) {
+                // Worst case scenario: Both failed. Log CRITICAL alert for manual admin intervention.
+                logger.fatalf("CRITICAL: DATA INCONSISTENCY! User %s has email %s in Auth but old email in DB. Manual fix required.",
+                        uid, request.email());
+            }
+
+            throw new ServiceException("Failed to sync email to database. Changes reverted.", e);
         }
     }
 
@@ -176,35 +198,37 @@ public class UserService {
 
     public void updateRoles(String uid, UpdateRolesRequestDTO request) {
         try {
-            Set<String> safeRoles = new HashSet<>();
+            User updatedUser = firestore.runTransaction(transaction -> {
+                DocumentReference docRef = firestore.collection(COLLECTION).document(uid);
+                DocumentSnapshot snapshot = transaction.get(docRef).get();
 
-            for (String r : request.roles()) {
-                User.Role roleEnum = User.Role.fromString(r);
-                if (roleEnum == null) {
-                    throw new IllegalArgumentException("Invalid role provided: " + r);
+                if (!snapshot.exists()) {
+                    throw new ResourceNotFoundException("User not found: " + uid);
                 }
-                safeRoles.add(roleEnum.getValue());
+
+                User user = snapshot.toObject(User.class);
+
+                user.setRoles(request.roles());
+
+                transaction.set(docRef, user);
+
+                return user;
+            }).get();
+
+            try {
+                Map<String, Object> claims = Map.of("roles", updatedUser.getRolesDb());
+                firebaseAuth.setCustomUserClaims(uid, claims);
+                logger.infof("Roles updated and claims synced for user %s", uid);
+
+            } catch (FirebaseAuthException e) {
+                logger.warnf("Roles saved to DB for %s, but Auth Claims sync failed. User will need to re-login to see changes.", uid);
             }
 
-            DocumentSnapshot snapshot = firestore.collection(COLLECTION).document(uid).get().get();
-            if (!snapshot.exists()) {
-                throw new ResourceNotFoundException("User not found: " + uid);
+        } catch (InterruptedException | ExecutionException e) {
+            if (e.getCause() instanceof ResourceNotFoundException) {
+                throw (ResourceNotFoundException) e.getCause();
             }
-            User user = snapshot.toObject(User.class);
-
-            user.setRoles(safeRoles);
-
-            firestore.collection(COLLECTION).document(uid).set(user).get();
-
-            java.util.Map<String, Object> claims = java.util.Map.of("roles", safeRoles);
-            firebaseAuth.setCustomUserClaims(uid, claims);
-
-            logger.infof("Roles updated for user %s. New roles: %s", uid, safeRoles);
-
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(e.getMessage());
-        } catch (Exception e) {
-            throw new ServiceException("Failed to update user roles", e);
+            throw new ServiceException("Failed to update user roles transactionally", e);
         }
     }
 

@@ -1,20 +1,43 @@
 package org.lgp.Entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.cloud.firestore.annotation.DocumentId;
+import com.google.cloud.firestore.annotation.Exclude;
+import com.google.cloud.firestore.annotation.PropertyName; // Import this!
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import jakarta.validation.constraints.NotBlank;
 
 @RegisterForReflection
 public class InventoryItem {
 
     @DocumentId
     private String id;
+
+    @NotBlank(message = "Boardgame ID is required")
     private String boardgameId;
+
     private String boardgameTitle;
+
+    // 1. REAL FIELDS (Use Enums directly!)
     private Status status;
     private Condition condition;
+
     private String details;
     private String currentLoanId;
 
+    // =========================================================================
+    // CONSTRUCTORS
+    // =========================================================================
+
+    public InventoryItem() {
+        this.status = Status.AVAILABLE;
+    }
+
+    // =========================================================================
+    // ENUMS
+    // =========================================================================
     @RegisterForReflection
     public enum Status {
         AVAILABLE("available"),
@@ -23,21 +46,15 @@ public class InventoryItem {
         LOST("lost");
 
         private final String value;
+        Status(String value) { this.value = value; }
 
-        Status(String value) {
-            this.value = value;
-        }
+        @JsonValue
+        public String getValue() { return value; }
 
-        @com.fasterxml.jackson.annotation.JsonValue
-        public String getValue() {
-            return value;
-        }
-
+        @JsonCreator
         public static Status fromString(String text) {
             for (Status s : Status.values()) {
-                if (s.value.equalsIgnoreCase(text)) {
-                    return s;
-                }
+                if (s.value.equalsIgnoreCase(text)) return s;
             }
             return null;
         }
@@ -52,94 +69,105 @@ public class InventoryItem {
         INCOMPLETE("incomplete");
 
         private final String value;
+        Condition(String value) { this.value = value; }
 
-        Condition(String value) {
-            this.value = value;
-        }
+        @JsonValue
+        public String getValue() { return value; }
 
-        @com.fasterxml.jackson.annotation.JsonValue
-        public String getValue() {
-            return value;
-        }
-
+        @JsonCreator
         public static Condition fromString(String text) {
             for (Condition c : Condition.values()) {
-                if (c.value.equalsIgnoreCase(text)) {
-                    return c;
-                }
+                if (c.value.equalsIgnoreCase(text)) return c;
             }
             return null;
         }
     }
 
-    public InventoryItem() {}
+    // -------------------------------------------------------------
+    // LOGIC & API ACCESSORS
+    // -------------------------------------------------------------
 
-    public String getId() {
-        return id;
+    @Exclude
+    public Status getStatus() { return status; }
+
+    @Exclude
+    public void setStatus(Status status) { this.status = status; }
+
+    @Exclude
+    public Condition getCondition() { return condition; }
+
+    @Exclude
+    public void setCondition(Condition condition) { this.condition = condition; }
+
+    // =========================================================================
+    // 2. FIRESTORE "SHADOW" ACCESSORS
+    // =========================================================================
+    @JsonIgnore
+    @PropertyName("status")
+    public String getStatusDb() {
+        return status != null ? status.getValue() : null;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    @JsonIgnore
+    @PropertyName("status")
+    public void setStatusDb(String value) {
+        if (value != null) {
+            Status s = Status.fromString(value);
+            if (s != null) {
+                this.status = s;
+            }
+        }
     }
 
-    public String getBoardgameId() {
-        return boardgameId;
+    @JsonIgnore
+    @PropertyName("condition")
+    public String getConditionDb() {
+        return condition != null ? condition.getValue() : null;
     }
 
-    public void setBoardgameId(String boardgameId) {
-        this.boardgameId = boardgameId;
+    @JsonIgnore
+    @PropertyName("condition")
+    public void setConditionDb(String value) {
+        if (value != null) {
+            Condition c = Condition.fromString(value);
+            if (c != null) {
+                this.condition = c;
+            }
+        }
     }
 
-    public String getBoardgameTitle() {
-        return boardgameTitle;
-    }
+    // -------------------------------------------------------------
+    // STANDARD GETTERS/SETTERS
+    // -------------------------------------------------------------
 
-    public void setBoardgameTitle(String boardgameTitle) {
-        this.boardgameTitle = boardgameTitle;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getBoardgameId() { return boardgameId; }
+    public void setBoardgameId(String boardgameId) { this.boardgameId = boardgameId; }
+    public String getBoardgameTitle() { return boardgameTitle; }
+    public void setBoardgameTitle(String boardgameTitle) { this.boardgameTitle = boardgameTitle; }
+    public String getDetails() { return details; }
+    public void setDetails(String details) { this.details = details; }
+    public String getCurrentLoanId() { return currentLoanId; }
+    public void setCurrentLoanId(String currentLoanId) { this.currentLoanId = currentLoanId; }
 
-    public Status getStatus() {
-        return status;
-    }
+    // =========================================================================
+    // DTOs
+    // =========================================================================
 
-    public void setStatus(Status status) {
-        this.status = status;
-    }
+    public record InventoryItemRequestDTO(
+            @NotBlank String boardgameId,
+            @NotBlank String condition,
+            String details
+    ) {}
 
-    public Condition getCondition() {
-        return condition;
-    }
-
-    public void setCondition(Condition condition) {
-        this.condition = condition;
-    }
-
-    public String getDetails() {
-        return details;
-    }
-
-    public void setDetails(String details) {
-        this.details = details;
-    }
-
-    public String getCurrentLoanId() {
-        return currentLoanId;
-    }
-
-    public void setCurrentLoanId(String currentLoanId) {
-        this.currentLoanId = currentLoanId;
-    }
-
-    @Override
-    public String toString() {
-        return "InventoryItem{" +
-                "id='" + id + '\'' +
-                ", boardgameId='" + boardgameId + '\'' +
-                ", boardgameTitle='" + boardgameTitle + '\'' +
-                ", status=" + status +
-                ", condition=" + condition +
-                ", details='" + details + '\'' +
-                ", currentLoanId='" + currentLoanId + '\'' +
-                '}';
-    }
+    public record InventoryItemResponseDTO(
+            String id,
+            String boardgameId,
+            String boardgameTitle,
+            Status status,
+            Condition condition,
+            String details,
+            String currentLoanId
+    ) {}
 }

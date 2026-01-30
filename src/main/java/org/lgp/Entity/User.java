@@ -1,9 +1,11 @@
 package org.lgp.Entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.cloud.firestore.annotation.DocumentId;
-
 import com.google.cloud.firestore.annotation.Exclude;
+import com.google.cloud.firestore.annotation.PropertyName;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -24,7 +26,8 @@ public class User {
     private String name;
     private String lname;
     private String email;
-    private Set<String> roles = new HashSet<>();
+
+    private Set<Role> roles = new HashSet<>();
 
     @RegisterForReflection
     public enum Role {
@@ -38,13 +41,14 @@ public class User {
             this.value = value;
         }
 
-        // This annotation ensures Firestore/Jackson uses this value when saving
-        @com.fasterxml.jackson.annotation.JsonValue
+        @JsonValue
         public String getValue() {
             return value;
         }
 
+        @JsonCreator
         public static Role fromString(String text) {
+            if (text == null) return null;
             for (Role b : Role.values()) {
                 if (b.value.equalsIgnoreCase(text)) {
                     return b;
@@ -54,12 +58,110 @@ public class User {
         }
     }
 
+    // -------------------------------------------------------------
+    // CONSTRUCTORS
+    // -------------------------------------------------------------
+
+    public User() {
+        this.roles.add(Role.USER);
+    }
+
+    public User(String uid, String name, String lname, String email) {
+        this();
+        this.uid = uid;
+        this.name = name;
+        this.lname = lname;
+        this.email = email;
+    }
+
+    // -------------------------------------------------------------
+    // LOGIC & API ACCESSORS
+    // -------------------------------------------------------------
+
+    // @Exclude prevents Firestore from using this (it would save "USER" otherwise)
+    // Jackson will still use this for API JSON automatically
+    @Exclude
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    @Exclude
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+
+    @Exclude
+    public void addRole(Role role) {
+        this.roles.add(role);
+    }
+
+    @Exclude
+    public void removeRole(Role role) {
+        this.roles.remove(role);
+    }
+
+    // -------------------------------------------------------------
+    // FIRESTORE "SHADOW" ACCESSORS
+    // -------------------------------------------------------------
+    @JsonIgnore
+    @PropertyName("roles")
+    public Set<String> getRolesDb() {
+        if (this.roles == null) return new HashSet<>();
+        return this.roles.stream()
+                .map(Role::getValue)
+                .collect(Collectors.toSet());
+    }
+
+    @JsonIgnore
+    @PropertyName("roles")
+    public void setRolesDb(Set<String> roleStrings) {
+        if (roleStrings == null) {
+            this.roles = new HashSet<>();
+        } else {
+            this.roles = roleStrings.stream()
+                    .map(Role::fromString)
+                    .filter(Objects::nonNull) // Prevent nulls if DB has invalid strings
+                    .collect(Collectors.toSet());
+        }
+    }
+
+    // -------------------------------------------------------------
+    // STANDARD GETTERS/SETTERS
+    // -------------------------------------------------------------
+
+    public String getUid() { return uid; }
+    public void setUid(String uid) { this.uid = uid; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getLname() { return lname; }
+    public void setLname(String lname) { this.lname = lname; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "uid='" + uid + '\'' +
+                ", name='" + name + '\'' +
+                ", lname='" + lname + '\'' +
+                ", email='" + email + '\'' +
+                ", roles=" + roles +
+                '}';
+    }
+
+    // -------------------------------------------------------------
+    // DTOs
+    // -------------------------------------------------------------
+
     public record UserProfileResponseDTO(
             String uid,
             String email,
             String name,
             String lname,
-            Set<String> roles
+            Set<Role> roles
     ) {}
 
     public record RegisterRequestDTO(
@@ -98,78 +200,6 @@ public class User {
 
     public record UpdateRolesRequestDTO(
             @NotNull(message = "Roles list cannot be null")
-            Set<String> roles
+            Set<Role> roles
     ) {}
-
-    public User() {
-        this.roles.add(Role.USER.getValue());
-    }
-
-    public User(String uid, String name, String lname, String email) {
-        this();
-        this.uid = uid;
-        this.name = name;
-        this.lname = lname;
-        this.email = email;
-    }
-
-    @Exclude
-    @JsonIgnore
-    public Set<Role> getEnumRoles() {
-        return roles.stream()
-                .map(Role::fromString)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-    }
-
-    public void addRole(Role role) {
-        this.roles.add(role.getValue());
-    }
-
-    public void removeRole(Role role) {
-        this.roles.remove(role.getValue());
-    }
-
-    public String getUid() {
-        return uid;
-    }
-
-    public void setUid(String uid) {
-        this.uid = uid;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getLname() {
-        return lname;
-    }
-
-    public void setLname(String lname) {
-        this.lname = lname;
-    }
-
-    public String getEmail() { return email; }
-
-    public void setEmail(String email) { this.email = email; }
-
-    public Set<String> getRoles() { return roles; }
-
-    public void setRoles(Set<String> roles) { this.roles = roles; }
-
-    @Override
-    public String toString() {
-        return "User{" +
-                "uid='" + uid + '\'' +
-                ", name='" + name + '\'' +
-                ", lname='" + lname + '\'' +
-                ", email='" + email + '\'' +
-                ", roles=" + roles +
-                '}';
-    }
 }
