@@ -14,7 +14,6 @@ import org.lgp.Entity.InventoryItem.InventoryItemResponseDTO;
 import org.lgp.Entity.InventoryItem.Status;
 import org.lgp.Exception.ErrorResponse;
 import org.lgp.Service.InventoryService;
-
 import java.net.URI;
 import java.util.List;
 
@@ -29,6 +28,10 @@ public class InventoryResource {
 
     @Inject
     SecurityIdentity identity;
+
+    // =========================================================================
+    // READ
+    // =========================================================================
 
     @GET
     public List<InventoryItemResponseDTO> list(
@@ -54,6 +57,10 @@ public class InventoryResource {
     public InventoryItemResponseDTO get(@PathParam("id") String id) {
         return inventoryService.getItem(id);
     }
+
+    // =========================================================================
+    // WRITE (Maintainer Only)
+    // =========================================================================
 
     @POST
     @RolesAllowed("maintainer")

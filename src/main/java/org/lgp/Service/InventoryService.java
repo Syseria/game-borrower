@@ -7,7 +7,7 @@ import com.google.cloud.firestore.Query;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import org.lgp.Entity.Boardgame.BoardgameResponse;
+import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
 import org.lgp.Entity.InventoryItem;
 import org.lgp.Entity.InventoryItem.Condition;
 import org.lgp.Entity.InventoryItem.InventoryItemRequestDTO;
@@ -15,13 +15,14 @@ import org.lgp.Entity.InventoryItem.InventoryItemResponseDTO;
 import org.lgp.Entity.InventoryItem.Status;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
-
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class InventoryService {
+
+    private static final String COLLECTION = "inventory";
 
     @Inject
     Firestore firestore;
@@ -32,11 +33,13 @@ public class InventoryService {
     @Inject
     Logger logger;
 
-    private static final String COLLECTION = "inventory";
+    // =========================================================================
+    // PUBLIC METHODS
+    // =========================================================================
 
     public String createItem(InventoryItemRequestDTO request) {
         try {
-            BoardgameResponse game = boardgameService.getBoardgame(request.boardgameId());
+            BoardgameResponseDTO game = boardgameService.getBoardgame(request.boardgameId());
 
             InventoryItem item = new InventoryItem();
             item.setBoardgameId(game.id());
@@ -50,7 +53,6 @@ public class InventoryService {
             item.setCondition(cond);
 
             return firestore.collection(COLLECTION).add(item).get().getId();
-
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to create inventory item", e);
         }
@@ -73,7 +75,6 @@ public class InventoryService {
             List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION)
                     .whereEqualTo("boardgameId", boardgameId)
                     .get().get().getDocuments();
-
             return docs.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to fetch items for game " + boardgameId, e);
@@ -85,7 +86,6 @@ public class InventoryService {
             List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION)
                     .whereEqualTo("status", Status.AVAILABLE.getValue())
                     .get().get().getDocuments();
-
             return docs.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to fetch available inventory", e);
@@ -98,7 +98,6 @@ public class InventoryService {
             if (!doc.exists()) throw new ResourceNotFoundException("Item not found: " + id);
 
             InventoryItem item = doc.toObject(InventoryItem.class);
-
             item.setDetails(request.details());
 
             Condition cond = Condition.fromString(request.condition());
@@ -106,7 +105,6 @@ public class InventoryService {
             item.setCondition(cond);
 
             firestore.collection(COLLECTION).document(id).set(item).get();
-
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to update item " + id, e);
         }
@@ -118,14 +116,12 @@ public class InventoryService {
             if (!doc.exists()) throw new ResourceNotFoundException("Item not found: " + id);
 
             InventoryItem item = doc.toObject(InventoryItem.class);
-
             if (item.getStatus() == Status.BORROWED && newStatus == Status.AVAILABLE) {
                 logger.warn("Manual status override on Borrowed item " + id);
             }
 
             item.setStatus(newStatus);
             firestore.collection(COLLECTION).document(id).set(item).get();
-
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to update status for " + id, e);
         }
@@ -137,13 +133,11 @@ public class InventoryService {
             if (!doc.exists()) throw new ResourceNotFoundException("Item not found: " + id);
 
             InventoryItem item = doc.toObject(InventoryItem.class);
-
             if (item.getStatus() == Status.BORROWED) {
                 throw new IllegalArgumentException("Cannot delete item while it is currently borrowed (Loan ID: " + item.getCurrentLoanId() + ")");
             }
 
             firestore.collection(COLLECTION).document(id).delete().get();
-
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to delete item " + id, e);
         }
@@ -156,25 +150,23 @@ public class InventoryService {
             if (gameId != null && !gameId.isBlank()) {
                 query = query.whereEqualTo("boardgameId", gameId);
             }
-
             if (status != null) {
                 query = query.whereEqualTo("status", status.getValue());
             }
-
             if (condition != null) {
                 query = query.whereEqualTo("condition", condition.getValue());
             }
 
             List<QueryDocumentSnapshot> docs = query.get().get().getDocuments();
-
-            return docs.stream()
-                    .map(this::mapEntityToResponse)
-                    .collect(Collectors.toList());
-
+            return docs.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to search inventory", e);
         }
     }
+
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
 
     private InventoryItemResponseDTO mapEntityToResponse(DocumentSnapshot doc) {
         InventoryItem item = doc.toObject(InventoryItem.class);

@@ -11,7 +11,6 @@ import jakarta.ws.rs.core.Response;
 import org.lgp.Entity.User;
 import org.lgp.Service.UserService;
 
-
 @Path("/register")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
@@ -19,6 +18,10 @@ public class RegisterResource {
 
     @Inject
     UserService userService;
+
+    // =========================================================================
+    // ENDPOINTS
+    // =========================================================================
 
     @POST
     public Response register(User.RegisterRequestDTO request) throws FirebaseAuthException {

@@ -25,7 +25,55 @@ public class Boardgame {
     // YouTube video explaining the rules/game
     private String videoUrl;
 
-    public record BoardgameRequest(
+    // =========================================================================
+    // CONSTRUCTORS
+    // =========================================================================
+
+    public Boardgame() {
+    }
+
+    // =========================================================================
+    // STANDARD GETTERS/SETTERS
+    // =========================================================================
+
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public String getPublisher() { return publisher; }
+    public void setPublisher(String publisher) { this.publisher = publisher; }
+
+    public Integer getMinPlayers() { return minPlayers; }
+    public void setMinPlayers(Integer minPlayers) { this.minPlayers = minPlayers; }
+
+    public Integer getMaxPlayers() { return maxPlayers; }
+    public void setMaxPlayers(Integer maxPlayers) { this.maxPlayers = maxPlayers; }
+
+    public Integer getMinAge() { return minAge; }
+    public void setMinAge(Integer minAge) { this.minAge = minAge; }
+
+    public Integer getMinTime() { return minTime; }
+    public void setMinTime(Integer minTime) { this.minTime = minTime; }
+
+    public Integer getMaxTime() { return maxTime; }
+    public void setMaxTime(Integer maxTime) { this.maxTime = maxTime; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public String getVideoUrl() { return videoUrl; }
+    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    // =========================================================================
+    // DTOs
+    // =========================================================================
+
+    public record BoardgameRequestDTO(
             @NotBlank(message = "Title is required")
             String title,
 
@@ -54,7 +102,6 @@ public class Boardgame {
             @NotBlank(message = "Description is required")
             String description,
 
-            // Optional fields do not need @NotNull, but if provided, must be valid
             @URL(message = "Image URL must be a valid URL")
             String imageUrl,
 
@@ -62,7 +109,7 @@ public class Boardgame {
             String videoUrl
     ) {}
 
-    public record BoardgameResponse(
+    public record BoardgameResponseDTO(
             String id,
             String title,
             String publisher,
@@ -76,96 +123,9 @@ public class Boardgame {
             String videoUrl
     ) {}
 
-    public Boardgame() {
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getPublisher() {
-        return publisher;
-    }
-
-    public void setPublisher(String publisher) {
-        this.publisher = publisher;
-    }
-
-    public Integer getMinPlayers() {
-        return minPlayers;
-    }
-
-    public void setMinPlayers(Integer minPlayers) {
-        this.minPlayers = minPlayers;
-    }
-
-    public Integer getMaxPlayers() {
-        return maxPlayers;
-    }
-
-    public void setMaxPlayers(Integer maxPlayers) {
-        this.maxPlayers = maxPlayers;
-    }
-
-    public Integer getMinAge() {
-        return minAge;
-    }
-
-    public void setMinAge(Integer minAge) {
-        this.minAge = minAge;
-    }
-
-    public Integer getMinTime() {
-        return minTime;
-    }
-
-    public void setMinTime(Integer minTime) {
-        this.minTime = minTime;
-    }
-
-    public Integer getMaxTime() {
-        return maxTime;
-    }
-
-    public void setMaxTime(Integer maxTime) {
-        this.maxTime = maxTime;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    // =========================================================================
+    // OVERRIDES
+    // =========================================================================
 
     @Override
     public String toString() {

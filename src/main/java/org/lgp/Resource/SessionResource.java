@@ -15,7 +15,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
-
 import java.util.concurrent.TimeUnit;
 
 @Path("/auth")
@@ -27,8 +26,9 @@ public class SessionResource {
     @Inject
     Logger logger;
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record LoginRequestDTO(String idToken) {}
+    // =========================================================================
+    // ENDPOINTS
+    // =========================================================================
 
     @POST
     @Path("/login")
@@ -82,4 +82,11 @@ public class SessionResource {
 
         return Response.ok("Logged out").cookie(logoutCookie).build();
     }
+
+    // =========================================================================
+    // DTOs
+    // =========================================================================
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record LoginRequestDTO(String idToken) {}
 }

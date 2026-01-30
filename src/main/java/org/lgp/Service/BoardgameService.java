@@ -5,13 +5,11 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-
 import org.lgp.Entity.Boardgame;
-import org.lgp.Entity.Boardgame.BoardgameRequest;
-import org.lgp.Entity.Boardgame.BoardgameResponse;
+import org.lgp.Entity.Boardgame.BoardgameRequestDTO;
+import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
 import org.lgp.Exception.ServiceException;
 import org.lgp.Exception.ResourceNotFoundException;
-
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -19,12 +17,16 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class BoardgameService {
 
+    private static final String COLLECTION = "boardgames";
+
     @Inject
     Firestore firestore;
 
-    private static final String COLLECTION = "boardgames";
+    // =========================================================================
+    // PUBLIC METHODS
+    // =========================================================================
 
-    public String createBoardgame(BoardgameRequest request) {
+    public String createBoardgame(BoardgameRequestDTO request) {
         try {
             Boardgame boardgame = mapRequestToEntity(request);
             return firestore.collection(COLLECTION).add(boardgame).get().getId();
@@ -33,7 +35,7 @@ public class BoardgameService {
         }
     }
 
-    public BoardgameResponse getBoardgame(String id) {
+    public BoardgameResponseDTO getBoardgame(String id) {
         try {
             DocumentSnapshot document = firestore.collection(COLLECTION).document(id).get().get();
             if (!document.exists()) {
@@ -45,7 +47,7 @@ public class BoardgameService {
         }
     }
 
-    public List<BoardgameResponse> getAllBoardgames() {
+    public List<BoardgameResponseDTO> getAllBoardgames() {
         try {
             List<QueryDocumentSnapshot> documents = firestore.collection(COLLECTION).get().get().getDocuments();
             return documents.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
@@ -54,7 +56,7 @@ public class BoardgameService {
         }
     }
 
-    public void updateBoardgame(String id, BoardgameRequest request) {
+    public void updateBoardgame(String id, BoardgameRequestDTO request) {
         try {
             if (!firestore.collection(COLLECTION).document(id).get().get().exists()) {
                 throw new ResourceNotFoundException("Cannot update, boardgame not found: " + id);
@@ -75,7 +77,11 @@ public class BoardgameService {
         }
     }
 
-    private Boardgame mapRequestToEntity(BoardgameRequest req) {
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
+
+    private Boardgame mapRequestToEntity(BoardgameRequestDTO req) {
         Boardgame bg = new Boardgame();
         bg.setTitle(req.title());
         bg.setPublisher(req.publisher());
@@ -90,12 +96,11 @@ public class BoardgameService {
         return bg;
     }
 
-    private BoardgameResponse mapEntityToResponse(DocumentSnapshot doc) {
+    private BoardgameResponseDTO mapEntityToResponse(DocumentSnapshot doc) {
         Boardgame bg = doc.toObject(Boardgame.class);
-        // Safety check if object mapping failed or doc is empty
         if (bg == null) return null;
 
-        return new BoardgameResponse(
+        return new BoardgameResponseDTO(
                 doc.getId(),
                 bg.getTitle(),
                 bg.getPublisher(),

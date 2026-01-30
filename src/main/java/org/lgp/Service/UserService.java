@@ -7,12 +7,9 @@ import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
-
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-
 import org.jboss.logging.Logger;
-
 import org.lgp.Entity.User;
 import org.lgp.Entity.User.UserProfileResponseDTO;
 import org.lgp.Entity.User.RegisterRequestDTO;
@@ -22,7 +19,6 @@ import org.lgp.Entity.User.UpdatePasswordRequestDTO;
 import org.lgp.Entity.User.UpdateRolesRequestDTO;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
-
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -30,6 +26,8 @@ import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class UserService {
+
+    private static final String COLLECTION = "users";
 
     @Inject
     Firestore firestore;
@@ -40,10 +38,11 @@ public class UserService {
     @Inject
     Logger logger;
 
-    private static final String COLLECTION = "users";
+    // =========================================================================
+    // PUBLIC METHODS
+    // =========================================================================
 
     public String registerUser(RegisterRequestDTO request) throws FirebaseAuthException {
-
         logger.infof("Attempting to create Auth user for email: %s", request.email());
 
         UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
@@ -63,12 +62,9 @@ public class UserService {
 
         try {
             User user = new User(uid, request.name(), request.lname(), request.email());
-
             firestore.collection(COLLECTION).document(uid).set(user).get();
-
             logger.infof("Successfully registered user with UID: %s", uid);
             return uid;
-
         } catch (InterruptedException | ExecutionException e) {
             logger.errorf("Failed to create Firestore profile for UID %s. Initiating rollback...", uid);
             try {
@@ -84,13 +80,10 @@ public class UserService {
     public UserProfileResponseDTO getUser(String uid) {
         try {
             DocumentSnapshot document = firestore.collection(COLLECTION).document(uid).get().get();
-
             if (!document.exists()) {
                 throw new ResourceNotFoundException("User profile not found for UID: " + uid);
             }
-
             return mapEntityToResponse(document);
-
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to fetch user profile", e);
         }
@@ -99,11 +92,7 @@ public class UserService {
     public List<UserProfileResponseDTO> getAllUsers() {
         try {
             List<QueryDocumentSnapshot> documents = firestore.collection(COLLECTION).get().get().getDocuments();
-
-            return documents.stream()
-                    .map(this::mapEntityToResponse)
-                    .collect(Collectors.toList());
-
+            return documents.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to fetch user list", e);
         }
@@ -136,10 +125,8 @@ public class UserService {
                 } catch (FirebaseAuthException e) {
                     logger.warn("Failed to sync Display Name to Auth", e);
                 }
-
                 firestore.collection(COLLECTION).document(uid).set(user).get();
             }
-
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to update profile", e);
         }
@@ -155,12 +142,10 @@ public class UserService {
                 return;
             }
 
-            UserRecord.UpdateRequest authUpdate = new UserRecord.UpdateRequest(uid)
-                    .setEmail(request.email());
+            UserRecord.UpdateRequest authUpdate = new UserRecord.UpdateRequest(uid).setEmail(request.email());
             firebaseAuth.updateUser(authUpdate);
 
             firestore.collection(COLLECTION).document(uid).update("email", request.email()).get();
-
             logger.infof("Email updated successfully for user %s", uid);
 
         } catch (FirebaseAuthException e) {
@@ -170,26 +155,20 @@ public class UserService {
             throw new ServiceException("Failed to update email in Auth", e);
         } catch (InterruptedException | ExecutionException e) {
             logger.errorf("DB update failed for %s. Rolling back Auth email...", uid);
-
             try {
-                UserRecord.UpdateRequest rollback = new UserRecord.UpdateRequest(uid)
-                        .setEmail(oldEmail);
+                UserRecord.UpdateRequest rollback = new UserRecord.UpdateRequest(uid).setEmail(oldEmail);
                 firebaseAuth.updateUser(rollback);
                 logger.info("Rollback successful. System state restored.");
             } catch (FirebaseAuthException rollbackEx) {
-                // Worst case scenario: Both failed. Log CRITICAL alert for manual admin intervention.
-                logger.fatalf("CRITICAL: DATA INCONSISTENCY! User %s has email %s in Auth but old email in DB. Manual fix required.",
-                        uid, request.email());
+                logger.fatalf("CRITICAL: DATA INCONSISTENCY! User %s has email %s in Auth but old email in DB.", uid, request.email());
             }
-
             throw new ServiceException("Failed to sync email to database. Changes reverted.", e);
         }
     }
 
     public void updatePassword(String uid, UpdatePasswordRequestDTO request) {
         try {
-            UserRecord.UpdateRequest authUpdate = new UserRecord.UpdateRequest(uid)
-                    .setPassword(request.password());
+            UserRecord.UpdateRequest authUpdate = new UserRecord.UpdateRequest(uid).setPassword(request.password());
             firebaseAuth.updateUser(authUpdate);
         } catch (FirebaseAuthException e) {
             throw new ServiceException("Failed to update password", e);
@@ -201,17 +180,12 @@ public class UserService {
             User updatedUser = firestore.runTransaction(transaction -> {
                 DocumentReference docRef = firestore.collection(COLLECTION).document(uid);
                 DocumentSnapshot snapshot = transaction.get(docRef).get();
-
                 if (!snapshot.exists()) {
                     throw new ResourceNotFoundException("User not found: " + uid);
                 }
-
                 User user = snapshot.toObject(User.class);
-
                 user.setRoles(request.roles());
-
                 transaction.set(docRef, user);
-
                 return user;
             }).get();
 
@@ -219,11 +193,9 @@ public class UserService {
                 Map<String, Object> claims = Map.of("roles", updatedUser.getRolesDb());
                 firebaseAuth.setCustomUserClaims(uid, claims);
                 logger.infof("Roles updated and claims synced for user %s", uid);
-
             } catch (FirebaseAuthException e) {
-                logger.warnf("Roles saved to DB for %s, but Auth Claims sync failed. User will need to re-login to see changes.", uid);
+                logger.warnf("Roles saved to DB for %s, but Auth Claims sync failed.", uid);
             }
-
         } catch (InterruptedException | ExecutionException e) {
             if (e.getCause() instanceof ResourceNotFoundException) {
                 throw (ResourceNotFoundException) e.getCause();
@@ -234,21 +206,22 @@ public class UserService {
 
     public void deleteUser(String uid) {
         try {
-            // TODO: Check if user has active Loans (InventoryService check)
-
+            // TODO: Check if user has active Loans
             firestore.collection(COLLECTION).document(uid).delete().get();
-
             try {
                 firebaseAuth.deleteUser(uid);
             } catch (FirebaseAuthException e) {
                 logger.error("Failed to delete Firebase Auth user after Firestore deletion: " + uid, e);
                 throw new ServiceException("Partial deletion failure", e);
             }
-
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to delete user", e);
         }
     }
+
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
 
     private UserProfileResponseDTO mapEntityToResponse(DocumentSnapshot doc) {
         User user = doc.toObject(User.class);

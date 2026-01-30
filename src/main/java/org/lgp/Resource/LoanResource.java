@@ -12,7 +12,6 @@ import org.lgp.Entity.Loan.CreateLoanRequestDTO;
 import org.lgp.Entity.Loan.LoanResponseDTO;
 import org.lgp.Entity.Loan.ReturnLoanRequestDTO;
 import org.lgp.Service.LoanService;
-
 import java.net.URI;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -32,25 +31,22 @@ public class LoanResource {
     // =========================================================================
     // READ
     // =========================================================================
+
     @GET
     public List<LoanResponseDTO> list(
             @QueryParam("userId") String userIdParam,
             @QueryParam("gameId") String gameId,
             @QueryParam("boxId") String boxId,
             @QueryParam("title") String title,
-
-            // Date Params (String format "yyyy-MM-dd")
             @QueryParam("borrowedAt") String borrowedAtStr,
             @QueryParam("dueAt") String dueAtStr,
             @QueryParam("returnedAt") String returnedAtStr,
-
             @QueryParam("sortBy") String sortBy,
             @QueryParam("active") @DefaultValue("false") boolean active
     ) {
         boolean isPrivileged = identity.hasRole("maintainer");
         String targetUserId = isPrivileged ? userIdParam : identity.getPrincipal().getName();
 
-        // Parse Dates
         Date borrowedAt = parseDate(borrowedAtStr);
         Date dueAt = parseDate(dueAtStr);
         Date returnedAt = parseDate(returnedAtStr);
@@ -60,7 +56,6 @@ public class LoanResource {
                 borrowedAt, dueAt, returnedAt, sortBy
         );
     }
-
 
     // =========================================================================
     // WRITE (Maintainer Only)
@@ -82,15 +77,14 @@ public class LoanResource {
     }
 
     // =========================================================================
-    // HELPER
+    // PRIVATE HELPERS
     // =========================================================================
+
     private Date parseDate(String dateStr) {
         if (dateStr == null || dateStr.isBlank()) return null;
         try {
             LocalDate localDate = LocalDate.parse(dateStr);
-
             return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-
         } catch (DateTimeParseException e) {
             return null;
         }

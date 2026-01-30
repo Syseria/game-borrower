@@ -7,10 +7,9 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.lgp.Entity.Boardgame.BoardgameRequest;
-import org.lgp.Entity.Boardgame.BoardgameResponse;
+import org.lgp.Entity.Boardgame.BoardgameRequestDTO;
+import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
 import org.lgp.Service.BoardgameService;
-
 import java.net.URI;
 import java.util.List;
 
@@ -23,20 +22,28 @@ public class BoardgameResource {
     @Inject
     BoardgameService boardgameService;
 
+    // =========================================================================
+    // READ
+    // =========================================================================
+
     @GET
-    public List<BoardgameResponse> getAll() {
+    public List<BoardgameResponseDTO> getAll() {
         return boardgameService.getAllBoardgames();
     }
 
     @GET
     @Path("/{id}")
-    public BoardgameResponse get(@PathParam("id") String id) {
+    public BoardgameResponseDTO get(@PathParam("id") String id) {
         return boardgameService.getBoardgame(id);
     }
 
+    // =========================================================================
+    // WRITE (Maintainer Only)
+    // =========================================================================
+
     @POST
     @RolesAllowed("maintainer")
-    public Response create(@Valid BoardgameRequest request) {
+    public Response create(@Valid BoardgameRequestDTO request) {
         String id = boardgameService.createBoardgame(request);
         return Response.created(URI.create("/games/" + id)).build();
     }
@@ -44,7 +51,7 @@ public class BoardgameResource {
     @PUT
     @Path("/{id}")
     @RolesAllowed("maintainer")
-    public Response update(@PathParam("id") String id, @Valid BoardgameRequest request) {
+    public Response update(@PathParam("id") String id, @Valid BoardgameRequestDTO request) {
         boardgameService.updateBoardgame(id, request);
         return Response.ok().build();
     }

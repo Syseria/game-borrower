@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.cloud.firestore.annotation.DocumentId;
 import com.google.cloud.firestore.annotation.Exclude;
-import com.google.cloud.firestore.annotation.PropertyName; // Import this!
+import com.google.cloud.firestore.annotation.PropertyName;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotBlank;
 
@@ -14,18 +14,16 @@ public class InventoryItem {
 
     @DocumentId
     private String id;
+    private String details;
+    private String currentLoanId;
 
     @NotBlank(message = "Boardgame ID is required")
     private String boardgameId;
-
     private String boardgameTitle;
 
-    // 1. REAL FIELDS (Use Enums directly!)
     private Status status;
     private Condition condition;
 
-    private String details;
-    private String currentLoanId;
 
     // =========================================================================
     // CONSTRUCTORS
@@ -38,6 +36,7 @@ public class InventoryItem {
     // =========================================================================
     // ENUMS
     // =========================================================================
+
     @RegisterForReflection
     public enum Status {
         AVAILABLE("available"),
@@ -84,25 +83,20 @@ public class InventoryItem {
         }
     }
 
-    // -------------------------------------------------------------
-    // LOGIC & API ACCESSORS
-    // -------------------------------------------------------------
+    // =========================================================================
+    // LOGIC & FIRESTORE SHADOW ACCESSORS
+    // =========================================================================
 
     @Exclude
     public Status getStatus() { return status; }
-
     @Exclude
     public void setStatus(Status status) { this.status = status; }
 
     @Exclude
     public Condition getCondition() { return condition; }
-
     @Exclude
     public void setCondition(Condition condition) { this.condition = condition; }
 
-    // =========================================================================
-    // 2. FIRESTORE "SHADOW" ACCESSORS
-    // =========================================================================
     @JsonIgnore
     @PropertyName("status")
     public String getStatusDb() {
@@ -114,9 +108,7 @@ public class InventoryItem {
     public void setStatusDb(String value) {
         if (value != null) {
             Status s = Status.fromString(value);
-            if (s != null) {
-                this.status = s;
-            }
+            if (s != null) { this.status = s; }
         }
     }
 
@@ -131,15 +123,13 @@ public class InventoryItem {
     public void setConditionDb(String value) {
         if (value != null) {
             Condition c = Condition.fromString(value);
-            if (c != null) {
-                this.condition = c;
-            }
+            if (c != null) { this.condition = c; }
         }
     }
 
-    // -------------------------------------------------------------
+    // =========================================================================
     // STANDARD GETTERS/SETTERS
-    // -------------------------------------------------------------
+    // =========================================================================
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

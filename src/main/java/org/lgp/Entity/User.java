@@ -12,7 +12,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.lgp.Validation.StrongPassword;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -26,41 +25,11 @@ public class User {
     private String name;
     private String lname;
     private String email;
-
     private Set<Role> roles = new HashSet<>();
 
-    @RegisterForReflection
-    public enum Role {
-        USER("user"),
-        MAINTAINER("maintainer"),
-        ADMIN("admin");
-
-        private final String value;
-
-        Role(String value) {
-            this.value = value;
-        }
-
-        @JsonValue
-        public String getValue() {
-            return value;
-        }
-
-        @JsonCreator
-        public static Role fromString(String text) {
-            if (text == null) return null;
-            for (Role b : Role.values()) {
-                if (b.value.equalsIgnoreCase(text)) {
-                    return b;
-                }
-            }
-            return null;
-        }
-    }
-
-    // -------------------------------------------------------------
+    // =========================================================================
     // CONSTRUCTORS
-    // -------------------------------------------------------------
+    // =========================================================================
 
     public User() {
         this.roles.add(Role.USER);
@@ -74,35 +43,45 @@ public class User {
         this.email = email;
     }
 
-    // -------------------------------------------------------------
-    // LOGIC & API ACCESSORS
-    // -------------------------------------------------------------
+    // =========================================================================
+    // ENUMS
+    // =========================================================================
 
-    // @Exclude prevents Firestore from using this (it would save "USER" otherwise)
-    // Jackson will still use this for API JSON automatically
-    @Exclude
-    public Set<Role> getRoles() {
-        return roles;
+    @RegisterForReflection
+    public enum Role {
+        USER("user"),
+        MAINTAINER("maintainer"),
+        ADMIN("admin");
+
+        private final String value;
+        Role(String value) { this.value = value; }
+
+        @JsonValue
+        public String getValue() { return value; }
+
+        @JsonCreator
+        public static Role fromString(String text) {
+            if (text == null) return null;
+            for (Role b : Role.values()) {
+                if (b.value.equalsIgnoreCase(text)) { return b; }
+            }
+            return null;
+        }
     }
 
-    @Exclude
-    public void setRoles(Set<Role> roles) {
-        this.roles = roles;
-    }
+    // =========================================================================
+    // LOGIC & FIRESTORE SHADOW ACCESSORS
+    // =========================================================================
 
     @Exclude
-    public void addRole(Role role) {
-        this.roles.add(role);
-    }
-
+    public Set<Role> getRoles() { return roles; }
     @Exclude
-    public void removeRole(Role role) {
-        this.roles.remove(role);
-    }
+    public void setRoles(Set<Role> roles) { this.roles = roles; }
+    @Exclude
+    public void addRole(Role role) { this.roles.add(role); }
+    @Exclude
+    public void removeRole(Role role) { this.roles.remove(role); }
 
-    // -------------------------------------------------------------
-    // FIRESTORE "SHADOW" ACCESSORS
-    // -------------------------------------------------------------
     @JsonIgnore
     @PropertyName("roles")
     public Set<String> getRolesDb() {
@@ -120,26 +99,54 @@ public class User {
         } else {
             this.roles = roleStrings.stream()
                     .map(Role::fromString)
-                    .filter(Objects::nonNull) // Prevent nulls if DB has invalid strings
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
         }
     }
 
-    // -------------------------------------------------------------
+    // =========================================================================
     // STANDARD GETTERS/SETTERS
-    // -------------------------------------------------------------
+    // =========================================================================
 
     public String getUid() { return uid; }
     public void setUid(String uid) { this.uid = uid; }
-
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-
     public String getLname() { return lname; }
     public void setLname(String lname) { this.lname = lname; }
-
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    // =========================================================================
+    // DTOs
+    // =========================================================================
+
+    public record UserProfileResponseDTO(String uid, String email, String name, String lname, Set<Role> roles) {}
+
+    public record RegisterRequestDTO(
+            @NotBlank(message = "Email can't be empty")
+            @Email(message = "Invalid email format")
+            String email,
+
+            @NotBlank(message = "Password can't be empty")
+            @Size(min = 8, message = "Password must be at least 8 characters long")
+            @StrongPassword String password,
+
+            @NotBlank(message = "First name can't be empty")
+            String name,
+
+            @NotBlank(message = "Last name can't be empty")
+            String lname
+    ) {}
+
+    public record UpdateProfileRequestDTO(String name, String lname) {}
+    public record UpdateEmailRequestDTO(@NotBlank(message = "Email is required") @Email(message = "Invalid email format") String email) {}
+    public record UpdatePasswordRequestDTO(@NotBlank(message = "Password is required") @Size(min = 8, message = "Password must be at least 8 characters") @StrongPassword String password) {}
+    public record UpdateRolesRequestDTO(@NotNull(message = "Roles list cannot be null") Set<Role> roles) {}
+
+    // =========================================================================
+    // OVERRIDES
+    // =========================================================================
 
     @Override
     public String toString() {
@@ -151,55 +158,4 @@ public class User {
                 ", roles=" + roles +
                 '}';
     }
-
-    // -------------------------------------------------------------
-    // DTOs
-    // -------------------------------------------------------------
-
-    public record UserProfileResponseDTO(
-            String uid,
-            String email,
-            String name,
-            String lname,
-            Set<Role> roles
-    ) {}
-
-    public record RegisterRequestDTO(
-            @NotBlank(message = "Email can't be empty")
-            @Email(message = "Invalid email format")
-            String email,
-
-            @NotBlank(message = "Password can't be empty")
-            @Size(min = 8, message = "Password must be at least 8 characters long")
-            @StrongPassword
-            String password,
-
-            @NotBlank(message = "First name can't be empty")
-            String name,
-            @NotBlank(message = "Last name can't be empty")
-            String lname
-    ) {}
-
-    public record UpdateProfileRequestDTO(
-            String name,
-            String lname
-    ) {}
-
-    public record UpdateEmailRequestDTO(
-            @NotBlank(message = "Email is required")
-            @Email(message = "Invalid email format")
-            String email
-    ) {}
-
-    public record UpdatePasswordRequestDTO(
-            @NotBlank(message = "Password is required")
-            @Size(min = 8, message = "Password must be at least 8 characters")
-            @StrongPassword
-            String password
-    ) {}
-
-    public record UpdateRolesRequestDTO(
-            @NotNull(message = "Roles list cannot be null")
-            Set<Role> roles
-    ) {}
 }

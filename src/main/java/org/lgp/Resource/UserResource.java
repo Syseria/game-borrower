@@ -7,7 +7,6 @@ import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-
 import jakarta.ws.rs.core.Response;
 import org.lgp.Entity.User.UpdateProfileRequestDTO;
 import org.lgp.Entity.User.UpdateEmailRequestDTO;
@@ -16,7 +15,6 @@ import org.lgp.Entity.User.UserProfileResponseDTO;
 import org.lgp.Entity.User.UpdateRolesRequestDTO;
 import org.lgp.Exception.ErrorResponse;
 import org.lgp.Service.UserService;
-
 import java.util.List;
 
 @Path("/users")
@@ -31,11 +29,14 @@ public class UserResource {
     @Inject
     SecurityIdentity identity;
 
+    // =========================================================================
+    // ME ENDPOINTS (Personal Profile)
+    // =========================================================================
+
     @GET
     @Path("/profile")
     public UserProfileResponseDTO getMyProfile() {
         String uid = identity.getPrincipal().getName();
-
         return userService.getUser(uid);
     }
 
@@ -62,6 +63,10 @@ public class UserResource {
         userService.updatePassword(uid, request);
         return Response.ok().build();
     }
+
+    // =========================================================================
+    // ADMIN/MANAGEMENT ENDPOINTS
+    // =========================================================================
 
     @GET
     @RolesAllowed("admin")
@@ -99,6 +104,7 @@ public class UserResource {
         userService.updatePassword(uid, request);
         return Response.ok().build();
     }
+
     @PUT
     @Path("/{uid}/roles")
     @RolesAllowed("admin")
@@ -112,7 +118,6 @@ public class UserResource {
                     .build();
         }
     }
-
 
     @DELETE
     @Path("/{uid}")
