@@ -7,7 +7,6 @@ import com.google.cloud.firestore.Query;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
 import org.lgp.Entity.InventoryItem;
 import org.lgp.Entity.InventoryItem.Condition;
 import org.lgp.Entity.InventoryItem.InventoryItemRequestDTO;
@@ -16,7 +15,6 @@ import org.lgp.Entity.InventoryItem.Status;
 import org.lgp.Exception.ConflictException;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
-import org.lgp.Exception.ValidationException;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -29,9 +27,6 @@ public class InventoryService {
 
     @Inject
     Firestore firestore;
-
-    @Inject
-    BoardgameService boardgameService;
 
     @Inject
     Logger logger;
@@ -65,60 +60,28 @@ public class InventoryService {
         }
     }
 
-    public List<InventoryItemResponseDTO> getItemsByBoardgameId(String boardgameId) {
-        try {
-            List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION)
-                    .whereEqualTo("boardgameId", boardgameId)
-                    .get().get().getDocuments();
-            return docs.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
-        } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Failed to fetch items for game " + boardgameId, e);
-        }
-    }
-
-    public List<InventoryItemResponseDTO> getAllAvailableItems() {
-        try {
-            List<QueryDocumentSnapshot> docs = firestore.collection(COLLECTION)
-                    .whereEqualTo("status", Status.AVAILABLE.getValue())
-                    .get().get().getDocuments();
-            return docs.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
-        } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Failed to fetch available inventory", e);
-        }
-    }
-
-    public void updateItem(String id, InventoryItemRequestDTO request) {
+    public void transitionItem(String id, Status nextStatus, Condition nextCondition, String nextDetails) {
         try {
             DocumentSnapshot doc = firestore.collection(COLLECTION).document(id).get().get();
             if (!doc.exists()) throw new ResourceNotFoundException("Item not found: " + id);
 
             InventoryItem item = doc.toObject(InventoryItem.class);
-            item.setDetails(request.details());
 
-            Condition cond = Condition.fromString(request.condition());
-            if (cond == null) throw new ValidationException("invalid-condition", "Invalid condition: " + request.condition());
-            item.setCondition(cond);
-
-            firestore.collection(COLLECTION).document(id).set(item).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Failed to update item " + id, e);
-        }
-    }
-
-    public void updateStatus(String id, Status newStatus) {
-        try {
-            DocumentSnapshot doc = firestore.collection(COLLECTION).document(id).get().get();
-            if (!doc.exists()) throw new ResourceNotFoundException("Item not found: " + id);
-
-            InventoryItem item = doc.toObject(InventoryItem.class);
-            if (item.getStatus() == Status.BORROWED && newStatus == Status.AVAILABLE) {
-                logger.warn("Manual status override on Borrowed item " + id);
+            // Security/Business Rule: Cannot move an item if it is currently BORROWED
+            // unless moving it to LOST or RETURNED.
+            if (item.getStatus() == Status.BORROWED &&
+                    (nextStatus == Status.AVAILABLE || nextStatus == Status.MAINTENANCE)) {
+                throw new ConflictException("item-active-loan",
+                        "Cannot make item Available/Maintenance while it is still Borrowed.");
             }
 
-            item.setStatus(newStatus);
+            item.setStatus(nextStatus);
+            if (nextCondition != null) item.setCondition(nextCondition);
+            if (nextDetails != null) item.setDetails(nextDetails);
+
             firestore.collection(COLLECTION).document(id).set(item).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Failed to update status for " + id, e);
+            throw new ServiceException("Failed to transition item " + id, e);
         }
     }
 

@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.Response;
 import org.lgp.Entity.Loan.CreateLoanRequestDTO;
 import org.lgp.Entity.Loan.LoanResponseDTO;
 import org.lgp.Entity.Loan.ReturnLoanRequestDTO;
+import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ValidationException;
 import org.lgp.Service.LoanService;
 import java.net.URI;
@@ -45,8 +46,7 @@ public class LoanResource {
             @QueryParam("sortBy") String sortBy,
             @QueryParam("active") @DefaultValue("false") boolean active
     ) {
-        boolean isPrivileged = identity.hasRole("maintainer");
-        String targetUserId = isPrivileged ? userIdParam : identity.getPrincipal().getName();
+        String targetUserId = identity.hasRole("maintainer") ? userIdParam : identity.getPrincipal().getName();
 
         Date borrowedAt = parseDate(borrowedAtStr);
         Date dueAt = parseDate(dueAtStr);
@@ -56,6 +56,24 @@ public class LoanResource {
                 targetUserId, gameId, boxId, title, active,
                 borrowedAt, dueAt, returnedAt, sortBy
         );
+    }
+
+    @GET
+    @Path("/{id}")
+    public LoanResponseDTO get(@PathParam("id") String id) {
+        LoanResponseDTO loan = loanService.getLoan(id);
+
+        // Ownership Check: Internal Lock
+        String currentUserId = identity.getPrincipal().getName();
+        boolean isMaintainer = identity.hasRole("maintainer");
+
+        if (!isMaintainer && !loan.userId().equals(currentUserId)) {
+            // Forbidden if not the owner and not a maintainer
+            // We return not found for security purposes
+            throw new ResourceNotFoundException("Loan not found.");
+        }
+
+        return loan;
     }
 
     // =========================================================================

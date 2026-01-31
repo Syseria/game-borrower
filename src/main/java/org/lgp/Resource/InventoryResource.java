@@ -8,11 +8,11 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.lgp.Entity.InventoryItem.InventoryStatusUpdateRequestDTO;
 import org.lgp.Entity.InventoryItem.Condition;
 import org.lgp.Entity.InventoryItem.InventoryItemRequestDTO;
 import org.lgp.Entity.InventoryItem.InventoryItemResponseDTO;
 import org.lgp.Entity.InventoryItem.Status;
-import org.lgp.Exception.ErrorResponse;
 import org.lgp.Service.InventoryService;
 import java.net.URI;
 import java.util.List;
@@ -70,23 +70,15 @@ public class InventoryResource {
     }
 
     @PUT
-    @Path("/{id}")
+    @Path("/{id}/lifecycle")
     @RolesAllowed("maintainer")
-    public Response update(@PathParam("id") String id, @Valid InventoryItemRequestDTO request) {
-        inventoryService.updateItem(id, request);
-        return Response.ok().build();
-    }
-
-    @PUT
-    @Path("/{id}/status/{status}")
-    @RolesAllowed("maintainer")
-    public Response updateStatus(@PathParam("id") String id, @PathParam("status") String statusStr) {
-        Status status = Status.fromString(statusStr);
-        if (status == null) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorResponse("invalid-status", "Invalid status provided")).build();
-        }
-        inventoryService.updateStatus(id, status);
+    public Response updateLifecycle(@PathParam("id") String id, @Valid InventoryStatusUpdateRequestDTO request) {
+        inventoryService.transitionItem(
+                id,
+                Status.fromString(request.status()),
+                Condition.fromString(request.condition()),
+                request.details()
+        );
         return Response.ok().build();
     }
 

@@ -1,10 +1,7 @@
 package org.lgp.Service;
 
 import com.google.cloud.Timestamp;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.Query;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -71,7 +68,7 @@ public class LoanService {
             loan.setActive(true);
 
             String loanId = firestore.collection(COLLECTION).add(loan).get().getId();
-            inventoryService.updateStatus(itemDTO.id(), InventoryItem.Status.BORROWED);
+            inventoryService.transitionItem(itemDTO.id(), InventoryItem.Status.BORROWED, null, null);
 
             return loanId;
         } catch (InterruptedException | ExecutionException e) {
@@ -85,23 +82,27 @@ public class LoanService {
             Loan loan = loanDoc.get().get().toObject(Loan.class);
 
             if (loan == null) throw new ResourceNotFoundException("Loan not found: " + loanId);
-            if (!loan.getActive()) throw new ConflictException("loan-already-returned", "This loan has already been closed");
+            if (!loan.getActive()) throw new ConflictException("loan-closed", "Loan already returned");
 
             loan.setActive(false);
             loan.setReturnedAt(Timestamp.now());
             loanDoc.set(loan);
 
-            var item = inventoryService.getItem(loan.getInventoryItemId());
-            inventoryService.updateStatus(item.id(), InventoryItem.Status.AVAILABLE);
+            // Transition item to RETURNED (Pending Maintainer check)
+            inventoryService.transitionItem(loan.getInventoryItemId(), InventoryItem.Status.RETURNED, null, null);
 
-            if (request != null && request.condition() != null && !request.condition().isBlank()) {
-                InventoryItem.InventoryItemRequestDTO updateReq = new InventoryItem.InventoryItemRequestDTO(
-                        item.boardgameId(), request.condition(), item.details()
-                );
-                inventoryService.updateItem(item.id(), updateReq);
-            }
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Check-in failed", e);
+        }
+    }
+
+    public LoanResponseDTO getLoan(String id) {
+        try {
+            DocumentSnapshot doc = firestore.collection(COLLECTION).document(id).get().get();
+            if (!doc.exists()) throw new ResourceNotFoundException("Loan not found: " + id);
+            return mapEntityToResponse((QueryDocumentSnapshot) doc);
+        } catch (InterruptedException | ExecutionException e) {
+            throw new ServiceException("Failed to fetch loan " + id, e);
         }
     }
 

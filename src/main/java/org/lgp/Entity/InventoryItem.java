@@ -172,4 +172,15 @@ public class InventoryItem {
             String details,
             String currentLoanId
     ) {}
+
+    public record InventoryStatusUpdateRequestDTO(
+            @NotBlank
+            @ValidEnum(enumClass = Status.class)
+            String status,
+
+            @ValidEnum(enumClass = Condition.class)
+            String condition,
+
+            String details
+    ) {}
 }
