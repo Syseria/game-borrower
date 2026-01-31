@@ -7,7 +7,9 @@ import com.google.cloud.firestore.annotation.DocumentId;
 import com.google.cloud.firestore.annotation.Exclude;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotNull;
+import org.lgp.Validation.InventoryItemExists;
 import org.lgp.Validation.LoanDuration;
+import org.lgp.Validation.UserExists;
 
 import java.util.Date;
 
@@ -82,9 +84,11 @@ public class Loan {
     @LoanDuration
     public record CreateLoanRequestDTO(
             @NotNull(message = "Inventory Item ID is required")
+            @InventoryItemExists
             String inventoryItemId,
 
             @NotNull(message = "User ID is required")
+            @UserExists
             String userId,
 
             @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")

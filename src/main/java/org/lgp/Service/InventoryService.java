@@ -45,7 +45,7 @@ public class InventoryService {
             InventoryItem item = new InventoryItem();
             item.setBoardgameId(request.boardgameId());
             item.setDetails(request.details());
-            item.setCondition(Condition.valueOf(request.condition()));
+            item.setCondition(Condition.fromString(request.condition()));
 
             return firestore.collection(COLLECTION).add(item).get().getId();
         } catch (InterruptedException | ExecutionException e) {

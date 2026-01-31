@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.Response;
 import org.lgp.Entity.Loan.CreateLoanRequestDTO;
 import org.lgp.Entity.Loan.LoanResponseDTO;
 import org.lgp.Entity.Loan.ReturnLoanRequestDTO;
+import org.lgp.Exception.ValidationException;
 import org.lgp.Service.LoanService;
 import java.net.URI;
 import java.time.LocalDate;
@@ -86,7 +87,7 @@ public class LoanResource {
             LocalDate localDate = LocalDate.parse(dateStr);
             return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
         } catch (DateTimeParseException e) {
-            return null;
+            throw new ValidationException("invalid-date-format", "Date '" + dateStr + "' is invalid. Use yyyy-MM-dd.");
         }
     }
 }

@@ -83,7 +83,7 @@ public class UserResource {
 
     @PATCH
     @Path("/{uid}/profile")
-    @RolesAllowed("user")
+    @RolesAllowed("admin")
     public Response updateProfile(@PathParam("uid") String uid, UpdateProfileRequestDTO request) {
         userService.updateProfile(uid, request);
         return Response.ok().build();

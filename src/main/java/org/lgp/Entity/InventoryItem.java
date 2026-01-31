@@ -8,6 +8,7 @@ import com.google.cloud.firestore.annotation.Exclude;
 import com.google.cloud.firestore.annotation.PropertyName;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.lgp.Validation.BoardgameExists;
 import org.lgp.Validation.ValidEnum;
 
@@ -16,6 +17,8 @@ public class InventoryItem {
 
     @DocumentId
     private String id;
+
+    @Size(max = 1024, message = "Details can't exceed 1024 characters")
     private String details;
     private String currentLoanId;
 
