@@ -7,6 +7,8 @@ import com.google.cloud.firestore.annotation.DocumentId;
 import com.google.cloud.firestore.annotation.Exclude;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotNull;
+import org.lgp.Validation.LoanDuration;
+
 import java.util.Date;
 
 @RegisterForReflection
@@ -77,6 +79,7 @@ public class Loan {
     // DTOs
     // =========================================================================
 
+    @LoanDuration
     public record CreateLoanRequestDTO(
             @NotNull(message = "Inventory Item ID is required")
             String inventoryItemId,

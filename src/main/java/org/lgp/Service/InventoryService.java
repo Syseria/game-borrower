@@ -13,8 +13,11 @@ import org.lgp.Entity.InventoryItem.Condition;
 import org.lgp.Entity.InventoryItem.InventoryItemRequestDTO;
 import org.lgp.Entity.InventoryItem.InventoryItemResponseDTO;
 import org.lgp.Entity.InventoryItem.Status;
+import org.lgp.Exception.ConflictException;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
+import org.lgp.Exception.ValidationException;
+
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -39,18 +42,10 @@ public class InventoryService {
 
     public String createItem(InventoryItemRequestDTO request) {
         try {
-            BoardgameResponseDTO game = boardgameService.getBoardgame(request.boardgameId());
-
             InventoryItem item = new InventoryItem();
-            item.setBoardgameId(game.id());
-            item.setBoardgameTitle(game.title());
+            item.setBoardgameId(request.boardgameId());
             item.setDetails(request.details());
-
-            Condition cond = Condition.fromString(request.condition());
-            if (cond == null) {
-                throw new IllegalArgumentException("Invalid condition: " + request.condition());
-            }
-            item.setCondition(cond);
+            item.setCondition(Condition.valueOf(request.condition()));
 
             return firestore.collection(COLLECTION).add(item).get().getId();
         } catch (InterruptedException | ExecutionException e) {
@@ -101,7 +96,7 @@ public class InventoryService {
             item.setDetails(request.details());
 
             Condition cond = Condition.fromString(request.condition());
-            if (cond == null) throw new IllegalArgumentException("Invalid condition: " + request.condition());
+            if (cond == null) throw new ValidationException("invalid-condition", "Invalid condition: " + request.condition());
             item.setCondition(cond);
 
             firestore.collection(COLLECTION).document(id).set(item).get();
@@ -134,7 +129,7 @@ public class InventoryService {
 
             InventoryItem item = doc.toObject(InventoryItem.class);
             if (item.getStatus() == Status.BORROWED) {
-                throw new IllegalArgumentException("Cannot delete item while it is currently borrowed (Loan ID: " + item.getCurrentLoanId() + ")");
+                throw new ConflictException("item-borrowed", "Cannot delete item while it is currently borrowed (Loan ID: " + item.getCurrentLoanId() + ")");
             }
 
             firestore.collection(COLLECTION).document(id).delete().get();

@@ -71,6 +71,7 @@ public class BoardgameService {
     public void deleteBoardgame(String id) {
         try {
             /// TODO: Check InventoryService before deleting
+            // if (hasItems) throw new ConflictException("game-has-inventory", "Cannot delete game with active inventory");
             firestore.collection(COLLECTION).document(id).delete().get();
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to delete boardgame " + id, e);

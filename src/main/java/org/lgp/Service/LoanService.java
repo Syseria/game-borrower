@@ -15,8 +15,11 @@ import org.lgp.Entity.Loan.CreateLoanRequestDTO;
 import org.lgp.Entity.Loan.LoanResponseDTO;
 import org.lgp.Entity.Loan.ReturnLoanRequestDTO;
 import org.lgp.Entity.User.UserProfileResponseDTO;
+import org.lgp.Exception.ConflictException;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
+import org.lgp.Exception.ValidationException;
+
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -45,7 +48,7 @@ public class LoanService {
 
             var itemDTO = inventoryService.getItem(request.inventoryItemId());
             if (itemDTO.status() != InventoryItem.Status.AVAILABLE) {
-                throw new IllegalArgumentException("Item not available: " + itemDTO.status());
+                throw new ConflictException("item-unavailable", "Item not available: " + itemDTO.status());
             }
 
             BoardgameResponseDTO game = boardgameService.getBoardgame(itemDTO.boardgameId());
@@ -61,9 +64,6 @@ public class LoanService {
             Date now = new Date();
             loan.setBorrowedAt(Timestamp.of(now));
             if (request.dueDate() != null) {
-                if (request.dueDate().before(now)) {
-                    throw new IllegalArgumentException("Due date cannot be in the past");
-                }
                 loan.setDueAt(Timestamp.of(request.dueDate()));
             } else {
                 loan.setDueAt(Timestamp.of(calculateDueDate(now, DEFAULT_LOAN_DAYS)));
@@ -85,7 +85,7 @@ public class LoanService {
             Loan loan = loanDoc.get().get().toObject(Loan.class);
 
             if (loan == null) throw new ResourceNotFoundException("Loan not found: " + loanId);
-            if (!loan.getActive()) throw new IllegalArgumentException("Loan already returned");
+            if (!loan.getActive()) throw new ConflictException("loan-already-returned", "This loan has already been closed");
 
             loan.setActive(false);
             loan.setReturnedAt(Timestamp.now());

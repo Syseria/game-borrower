@@ -8,6 +8,8 @@ import com.google.cloud.firestore.annotation.Exclude;
 import com.google.cloud.firestore.annotation.PropertyName;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotBlank;
+import org.lgp.Validation.BoardgameExists;
+import org.lgp.Validation.ValidEnum;
 
 @RegisterForReflection
 public class InventoryItem {
@@ -147,8 +149,14 @@ public class InventoryItem {
     // =========================================================================
 
     public record InventoryItemRequestDTO(
-            @NotBlank String boardgameId,
-            @NotBlank String condition,
+            @NotBlank
+            @BoardgameExists
+            String boardgameId,
+
+            @NotBlank
+            @ValidEnum(enumClass = Condition.class)
+            String condition,
+
             String details
     ) {}
 
