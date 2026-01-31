@@ -5,17 +5,18 @@ import com.google.cloud.firestore.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import org.lgp.Entity.Boardgame.BoardgameSearchCriteria;
 import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
 import org.lgp.Entity.InventoryItem;
 import org.lgp.Entity.Loan;
 import org.lgp.Entity.Loan.CreateLoanRequestDTO;
 import org.lgp.Entity.Loan.LoanResponseDTO;
 import org.lgp.Entity.Loan.ReturnLoanRequestDTO;
+import org.lgp.Entity.User.UserSearchCriteria;
 import org.lgp.Entity.User.UserProfileResponseDTO;
 import org.lgp.Exception.ConflictException;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
-import org.lgp.Exception.ValidationException;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -41,58 +42,97 @@ public class LoanService {
 
     public String createLoan(CreateLoanRequestDTO request) {
         try {
-            UserProfileResponseDTO user = userService.getUser(request.userId());
+            return firestore.runTransaction(transaction -> {
+                // --- STEP 1: READS ---
 
-            var itemDTO = inventoryService.getItem(request.inventoryItemId());
-            if (itemDTO.status() != InventoryItem.Status.AVAILABLE) {
-                throw new ConflictException("item-unavailable", "Item not available: " + itemDTO.status());
-            }
+                UserSearchCriteria userCriteria = UserSearchCriteria.builder()
+                        .id(request.userId())
+                        .build();
+                List<UserProfileResponseDTO> users = userService.searchUsers(userCriteria);
+                if (users.isEmpty()) {
+                    throw new ResourceNotFoundException("User not found: " + request.userId());
+                }
+                UserProfileResponseDTO user = users.getFirst();
 
-            BoardgameResponseDTO game = boardgameService.getBoardgame(itemDTO.boardgameId());
+                // Fetch Inventory Item directly via Reference for transaction tracking
+                DocumentReference itemRef = firestore.collection("inventory").document(request.inventoryItemId());
+                DocumentSnapshot itemSnap = transaction.get(itemRef).get();
+                if (!itemSnap.exists()) {
+                    throw new ResourceNotFoundException("Inventory item not found: " + request.inventoryItemId());
+                }
+                InventoryItem item = itemSnap.toObject(InventoryItem.class);
 
-            Loan loan = new Loan();
-            loan.setUserId(user.uid());
-            loan.setUserEmail(user.email());
-            loan.setInventoryItemId(itemDTO.id());
-            loan.setBoardgameId(game.id());
-            loan.setBoardgameTitle(game.title());
-            loan.setBoardgameImageUrl(game.imageUrl());
+                // Business Logic: Check if available
+                if (item.getStatus() != InventoryItem.Status.AVAILABLE) {
+                    throw new ConflictException("item-unavailable", "Item is currently " + item.getStatus());
+                }
 
-            Date now = new Date();
-            loan.setBorrowedAt(Timestamp.of(now));
-            if (request.dueDate() != null) {
-                loan.setDueAt(Timestamp.of(request.dueDate()));
-            } else {
-                loan.setDueAt(Timestamp.of(calculateDueDate(now, DEFAULT_LOAN_DAYS)));
-            }
-            loan.setActive(true);
+                // Use the new Search Builder for Boardgame
+                BoardgameSearchCriteria bgCriteria = BoardgameSearchCriteria.builder()
+                        .id(item.getBoardgameId())
+                        .build();
+                List<BoardgameResponseDTO> games = boardgameService.searchBoardgames(bgCriteria);
+                if (games.isEmpty()) {
+                    throw new ResourceNotFoundException("Boardgame not found: " + item.getBoardgameId());
+                }
+                BoardgameResponseDTO game = games.getFirst();
 
-            String loanId = firestore.collection(COLLECTION).add(loan).get().getId();
-            inventoryService.transitionItem(itemDTO.id(), InventoryItem.Status.BORROWED, null, null);
+                // --- STEP 2: WRITES ---
 
-            return loanId;
+                // Create the Loan Entity
+                DocumentReference loanRef = firestore.collection(COLLECTION).document();
+                Loan loan = new Loan();
+                loan.setUserId(user.uid());
+                loan.setUserEmail(user.email());
+                loan.setInventoryItemId(itemSnap.getId());
+                loan.setBoardgameId(game.id());
+                loan.setBoardgameTitle(game.title());
+                loan.setBoardgameImageUrl(game.imageUrl());
+
+                Date now = new Date();
+                loan.setBorrowedAt(Timestamp.of(now));
+
+                // Set due date logic
+                if (request.dueDate() != null) {
+                    loan.setDueAt(Timestamp.of(request.dueDate()));
+                } else {
+                    loan.setDueAt(Timestamp.of(calculateDueDate(now, DEFAULT_LOAN_DAYS)));
+                }
+                loan.setActive(true);
+
+                transaction.set(loanRef, loan);
+
+                transaction.update(itemRef, "status", InventoryItem.Status.BORROWED.getValue());
+
+                return loanRef.getId();
+            }).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Checkout failed", e);
+            if (e.getCause() instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            throw new ServiceException("Checkout failed due to database error", e);
         }
     }
 
-    public void returnLoan(String loanId, ReturnLoanRequestDTO request) {
+    public void returnLoan(String loanId) {
         try {
-            DocumentReference loanDoc = firestore.collection(COLLECTION).document(loanId);
-            Loan loan = loanDoc.get().get().toObject(Loan.class);
+            firestore.runTransaction(transaction -> {
+                DocumentReference loanRef = firestore.collection(COLLECTION).document(loanId);
+                DocumentSnapshot loanSnap = transaction.get(loanRef).get();
+                if (!loanSnap.exists()) throw new ResourceNotFoundException("Loan not found");
+                Loan loan = loanSnap.toObject(Loan.class);
 
-            if (loan == null) throw new ResourceNotFoundException("Loan not found: " + loanId);
-            if (!loan.getActive()) throw new ConflictException("loan-closed", "Loan already returned");
+                if (!loan.getActive()) throw new ConflictException("loan-closed", "Loan already returned");
 
-            loan.setActive(false);
-            loan.setReturnedAt(Timestamp.now());
-            loanDoc.set(loan);
+                transaction.update(loanRef, "active", false, "returnedAt", Timestamp.now());
 
-            // Transition item to RETURNED (Pending Maintainer check)
-            inventoryService.transitionItem(loan.getInventoryItemId(), InventoryItem.Status.RETURNED, null, null);
+                DocumentReference itemRef = firestore.collection("inventory").document(loan.getInventoryItemId());
+                transaction.update(itemRef, "status", InventoryItem.Status.RETURNED.getValue());
 
+                return null;
+            }).get();
         } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Check-in failed", e);
+            throw new ServiceException("Transactional return failed", e);
         }
     }
 

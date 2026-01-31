@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.lgp.Entity.Boardgame.BoardgameSearchCriteria;
 import org.lgp.Entity.Boardgame.BoardgameRequestDTO;
 import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
 import org.lgp.Service.BoardgameService;
@@ -27,14 +28,15 @@ public class BoardgameResource {
     // =========================================================================
 
     @GET
-    public List<BoardgameResponseDTO> getAll() {
-        return boardgameService.getAllBoardgames();
-    }
+    public List<BoardgameResponseDTO> getAll() { return boardgameService.searchBoardgames(BoardgameSearchCriteria.builder().build()); }
 
     @GET
     @Path("/{id}")
-    public BoardgameResponseDTO get(@PathParam("id") String id) {
-        return boardgameService.getBoardgame(id);
+    public List<BoardgameResponseDTO> get(@PathParam("id") String id) {
+        BoardgameSearchCriteria criteria = BoardgameSearchCriteria.builder()
+                .id(id)
+                .build();
+        return boardgameService.searchBoardgames(criteria);
     }
 
     // =========================================================================

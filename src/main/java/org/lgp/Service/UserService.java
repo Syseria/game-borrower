@@ -1,9 +1,6 @@
 package org.lgp.Service;
 
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
@@ -12,6 +9,7 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import org.lgp.Entity.User;
 import org.lgp.Entity.User.UserProfileResponseDTO;
+import org.lgp.Entity.User.UserSearchCriteria;
 import org.lgp.Entity.User.RegisterRequestDTO;
 import org.lgp.Entity.User.UpdateProfileRequestDTO;
 import org.lgp.Entity.User.UpdateEmailRequestDTO;
@@ -77,24 +75,20 @@ public class UserService {
         }
     }
 
-    public UserProfileResponseDTO getUser(String uid) {
+    public List<UserProfileResponseDTO> searchUsers(UserSearchCriteria criteria) {
         try {
-            DocumentSnapshot document = firestore.collection(COLLECTION).document(uid).get().get();
-            if (!document.exists()) {
-                throw new ResourceNotFoundException("User profile not found for UID: " + uid);
-            }
-            return mapEntityToResponse(document);
-        } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Failed to fetch user profile", e);
-        }
-    }
+            Query query = firestore.collection(COLLECTION);
 
-    public List<UserProfileResponseDTO> getAllUsers() {
-        try {
-            List<QueryDocumentSnapshot> documents = firestore.collection(COLLECTION).get().get().getDocuments();
-            return documents.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
+            if (criteria.id() != null) query = query.whereEqualTo("uid", criteria.id());
+            if (criteria.name() != null) query = query.whereEqualTo("name", criteria.name());
+            if (criteria.lname() != null) query = query.whereEqualTo("lname", criteria.lname());
+            if (criteria.email() != null) query = query.whereEqualTo("email", criteria.email());
+            if (criteria.role() != null) query = query.whereArrayContains("roles", criteria.role().getValue());
+
+            return query.get().get().getDocuments().stream()
+                    .map(this::mapEntityToResponse).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Failed to fetch user list", e);
+            throw new ServiceException("User search failed", e);
         }
     }
 

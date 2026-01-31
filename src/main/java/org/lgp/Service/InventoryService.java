@@ -105,15 +105,9 @@ public class InventoryService {
         try {
             Query query = firestore.collection(COLLECTION);
 
-            if (gameId != null && !gameId.isBlank()) {
-                query = query.whereEqualTo("boardgameId", gameId);
-            }
-            if (status != null) {
-                query = query.whereEqualTo("status", status.getValue());
-            }
-            if (condition != null) {
-                query = query.whereEqualTo("condition", condition.getValue());
-            }
+            if (gameId != null && !gameId.isBlank()) query = query.whereEqualTo("boardgameId", gameId);
+            if (status != null) query = query.whereEqualTo("status", status.getValue());
+            if (condition != null) query = query.whereEqualTo("condition", condition.getValue());
 
             List<QueryDocumentSnapshot> docs = query.get().get().getDocuments();
             return docs.stream().map(this::mapEntityToResponse).collect(Collectors.toList());

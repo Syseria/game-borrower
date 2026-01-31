@@ -121,6 +121,34 @@ public class User {
     // DTOs
     // =========================================================================
 
+    public record UserSearchCriteria(
+            String id,
+            String name,
+            String lname,
+            String email,
+            User.Role role
+    ) {
+        public static Builder builder() { return new Builder(); }
+
+        public static class Builder {
+            private String id;
+            private String name;
+            private String lname;
+            private String email;
+            private User.Role role;
+
+            public Builder id(String id) { this.id = id; return this; }
+            public Builder name(String name) { this.name = name; return this; }
+            public Builder lname(String lname) { this.lname = lname; return this; }
+            public Builder email(String email) { this.email = email; return this; }
+            public Builder role(User.Role role) { this.role = role; return this; }
+
+            public UserSearchCriteria build() {
+                return new UserSearchCriteria(id, name, lname, email, role);
+            }
+        }
+    }
+
     public record UserProfileResponseDTO(String uid, String email, String name, String lname, Set<Role> roles) {}
 
     public record RegisterRequestDTO(

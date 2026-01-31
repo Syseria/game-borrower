@@ -77,11 +77,10 @@ public class LoanResource {
     }
 
     // =========================================================================
-    // WRITE (Maintainer Only)
+    // WRITE
     // =========================================================================
 
     @POST
-    @RolesAllowed("maintainer")
     public Response checkout(@Valid CreateLoanRequestDTO request) {
         String id = loanService.createLoan(request);
         return Response.created(URI.create("/loans/" + id)).build();
@@ -89,9 +88,8 @@ public class LoanResource {
 
     @PUT
     @Path("/{id}/return")
-    @RolesAllowed("maintainer")
-    public Response checkin(@PathParam("id") String id, ReturnLoanRequestDTO request) {
-        loanService.returnLoan(id, request);
+    public Response checkin(@PathParam("id") String id) {
+        loanService.returnLoan(id);
         return Response.ok().build();
     }
 

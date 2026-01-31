@@ -2,6 +2,7 @@ package org.lgp.Service;
 
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -35,24 +36,23 @@ public class BoardgameService {
         }
     }
 
-    public BoardgameResponseDTO getBoardgame(String id) {
+    public List<BoardgameResponseDTO> searchBoardgames(Boardgame.BoardgameSearchCriteria criteria) {
         try {
-            DocumentSnapshot document = firestore.collection(COLLECTION).document(id).get().get();
-            if (!document.exists()) {
-                throw new ResourceNotFoundException("Boardgame not found: " + id);
-            }
-            return mapEntityToResponse(document);
-        } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Failed to fetch boardgame " + id, e);
-        }
-    }
+            Query query = firestore.collection(COLLECTION);
 
-    public List<BoardgameResponseDTO> getAllBoardgames() {
-        try {
-            List<QueryDocumentSnapshot> documents = firestore.collection(COLLECTION).get().get().getDocuments();
-            return documents.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
+            if (criteria.id() != null) query = query.whereEqualTo("id", criteria.id());
+            if (criteria.title() != null) query = query.whereEqualTo("title", criteria.title());
+            if (criteria.publisher() != null) query = query.whereEqualTo("publisher", criteria.publisher());
+            if (criteria.minPlayers() != null) query = query.whereGreaterThanOrEqualTo("minPlayers", criteria.minPlayers());
+            if (criteria.maxPlayers() != null) query = query.whereLessThanOrEqualTo("maxPlayers", criteria.maxPlayers());
+            if (criteria.minAge() != null) query = query.whereGreaterThanOrEqualTo("minAge", criteria.minAge());
+            if (criteria.minTime() != null) query = query.whereGreaterThanOrEqualTo("minTime", criteria.minTime());
+            if (criteria.hasVideo() != null && criteria.hasVideo()) query = query.whereNotEqualTo("videoUrl", null);
+
+            return query.get().get().getDocuments().stream()
+                    .map(this::mapEntityToResponse).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
-            throw new ServiceException("Failed to fetch boardgames", e);
+            throw new ServiceException("Boardgame search failed", e);
         }
     }
 
