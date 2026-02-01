@@ -119,4 +119,44 @@ public class Loan {
 
             Boolean active
     ) {}
+
+    public record LoanSearchCriteria(
+            String userId,
+            String gameId,
+            String inventoryItemId,
+            String title,
+            Boolean activeOnly,
+            Date borrowedAt,
+            Date dueAt,
+            Date returnedAt,
+            String sortBy
+    ) {
+        public static Builder builder() { return new Builder(); }
+
+        public static class Builder {
+            private String userId;
+            private String gameId;
+            private String inventoryItemId;
+            private String title;
+            private Boolean activeOnly;
+            private Date borrowedAt;
+            private Date dueAt;
+            private Date returnedAt;
+            private String sortBy;
+
+            public Builder userId(String userId) { this.userId = userId; return this; }
+            public Builder gameId(String gameId) { this.gameId = gameId; return this; }
+            public Builder inventoryItemId(String id) { this.inventoryItemId = id; return this; }
+            public Builder title(String title) { this.title = title; return this; }
+            public Builder activeOnly(Boolean active) { this.activeOnly = active; return this; }
+            public Builder borrowedAt(Date date) { this.borrowedAt = date; return this; }
+            public Builder dueAt(Date date) { this.dueAt = date; return this; }
+            public Builder returnedAt(Date date) { this.returnedAt = date; return this; }
+            public Builder sortBy(String sortBy) { this.sortBy = sortBy; return this; }
+
+            public LoanSearchCriteria build() {
+                return new LoanSearchCriteria(userId, gameId, inventoryItemId, title, activeOnly, borrowedAt, dueAt, returnedAt, sortBy);
+            }
+        }
+    }
 }

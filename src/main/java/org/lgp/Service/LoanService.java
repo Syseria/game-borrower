@@ -9,9 +9,9 @@ import org.lgp.Entity.Boardgame.BoardgameSearchCriteria;
 import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
 import org.lgp.Entity.InventoryItem;
 import org.lgp.Entity.Loan;
+import org.lgp.Entity.Loan.LoanSearchCriteria;
 import org.lgp.Entity.Loan.CreateLoanRequestDTO;
 import org.lgp.Entity.Loan.LoanResponseDTO;
-import org.lgp.Entity.Loan.ReturnLoanRequestDTO;
 import org.lgp.Entity.User.UserSearchCriteria;
 import org.lgp.Entity.User.UserProfileResponseDTO;
 import org.lgp.Exception.ConflictException;
@@ -146,35 +146,23 @@ public class LoanService {
         }
     }
 
-    public List<LoanResponseDTO> searchLoans(
-            String userId, String gameId, String boxId, String title,
-            boolean activeOnly, Date borrowedAt, Date dueAt, Date returnedAt, String sortBy
-    ) {
+    public List<LoanResponseDTO> searchLoans(LoanSearchCriteria criteria) {
         try {
             Query query = firestore.collection(COLLECTION);
 
-            if (userId != null && !userId.isBlank()) query = query.whereEqualTo("userId", userId);
-            if (gameId != null && !gameId.isBlank()) query = query.whereEqualTo("boardgameId", gameId);
-            if (boxId != null && !boxId.isBlank()) query = query.whereEqualTo("inventoryItemId", boxId);
-            if (title != null && !title.isBlank()) query = query.whereEqualTo("boardgameTitle", title);
+            if (criteria.userId() != null && !criteria.userId().isBlank()) query = query.whereEqualTo("userId", criteria.userId());
+            if (criteria.gameId() != null && !criteria.gameId().isBlank()) query = query.whereEqualTo("boardgameId", criteria.gameId());
+            if (criteria.inventoryItemId() != null && !criteria.inventoryItemId().isBlank()) query = query.whereEqualTo("inventoryItemId", criteria.inventoryItemId());
+            if (criteria.title() != null && !criteria.title().isBlank()) query = query.whereEqualTo("boardgameTitle", criteria.title());
+            if (criteria.activeOnly() != null && criteria.activeOnly()) query = query.whereEqualTo("active", true);
 
-            if (activeOnly) query = query.whereEqualTo("active", true);
+            // Handle Date Range filters
+            if (criteria.borrowedAt() != null) query = addDayRangeFilter(query, "borrowedAt", criteria.borrowedAt());
+            else if (criteria.dueAt() != null) query = addDayRangeFilter(query, "dueAt", criteria.dueAt());
+            else if (criteria.returnedAt() != null) query = addDayRangeFilter(query, "returnedAt", criteria.returnedAt());
 
-            if (borrowedAt != null) {
-                query = addDayRangeFilter(query, "borrowedAt", borrowedAt);
-            } else if (dueAt != null) {
-                query = addDayRangeFilter(query, "dueAt", dueAt);
-            } else if (returnedAt != null) {
-                query = addDayRangeFilter(query, "returnedAt", returnedAt);
-            }
-
-            String sortField = "borrowedAt";
-            if (sortBy != null && !sortBy.isBlank()) {
-                sortField = sortBy;
-            } else if (dueAt != null) {
-                sortField = "dueAt";
-            }
-
+            // Sorting
+            String sortField = (criteria.sortBy() != null && !criteria.sortBy().isBlank()) ? criteria.sortBy() : "borrowedAt";
             query = query.orderBy(sortField, Query.Direction.DESCENDING);
 
             return query.get().get().getDocuments().stream()

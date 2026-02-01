@@ -73,19 +73,23 @@ public class UserResource {
 
     @GET
     @RolesAllowed("admin")
-    public List<UserProfileResponseDTO> getAll() {
-        return userService.searchUsers(User.UserSearchCriteria.builder().build());
-    }
-
-    @GET
-    @Path("/{uid}")
-    @RolesAllowed("admin")
-    public UserProfileResponseDTO get(@PathParam("uid") String uid) {
+    public List<UserProfileResponseDTO> search(
+            @QueryParam("uid") String uid,
+            @QueryParam("name") String name,
+            @QueryParam("lname") String lname,
+            @QueryParam("email") String email,
+            @QueryParam("role") String roleStr
+    ) {
+        User.Role role = (roleStr != null) ? User.Role.fromString(roleStr) : null;
         User.UserSearchCriteria criteria = User.UserSearchCriteria.builder()
                 .id(uid)
+                .name(name)
+                .lname(lname)
+                .email(email)
+                .role(role)
                 .build();
 
-        return userService.searchUsers(criteria).getFirst();
+        return userService.searchUsers(criteria);
     }
 
     @PATCH

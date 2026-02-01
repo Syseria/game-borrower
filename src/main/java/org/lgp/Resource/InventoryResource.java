@@ -9,6 +9,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.lgp.Entity.InventoryItem.InventoryStatusUpdateRequestDTO;
+import org.lgp.Entity.InventoryItem.InventorySearchCriteria;
 import org.lgp.Entity.InventoryItem.Condition;
 import org.lgp.Entity.InventoryItem.InventoryItemRequestDTO;
 import org.lgp.Entity.InventoryItem.InventoryItemResponseDTO;
@@ -34,7 +35,7 @@ public class InventoryResource {
     // =========================================================================
 
     @GET
-    public List<InventoryItemResponseDTO> list(
+    public List<InventoryItemResponseDTO> search(
             @QueryParam("gameId") String gameId,
             @QueryParam("status") String status,
             @QueryParam("condition") String condition
@@ -42,14 +43,17 @@ public class InventoryResource {
         Status requestedStatus = (status != null) ? Status.fromString(status) : null;
         Condition requestedCondition = (condition != null) ? Condition.fromString(condition) : null;
 
-        boolean isPrivileged = identity.hasRole("maintainer");
-
-        if (!isPrivileged) {
+        if (!identity.hasRole("maintainer")) {
             requestedStatus = Status.AVAILABLE;
-            requestedCondition = null;
         }
 
-        return inventoryService.searchInventory(gameId, requestedStatus, requestedCondition);
+        InventorySearchCriteria criteria = InventorySearchCriteria.builder()
+                .gameId(gameId)
+                .status(requestedStatus)
+                .condition(requestedCondition)
+                .build();
+
+        return inventoryService.searchInventory(criteria);
     }
 
     @GET

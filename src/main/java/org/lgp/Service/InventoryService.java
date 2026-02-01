@@ -1,13 +1,14 @@
 package org.lgp.Service;
 
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.FieldPath;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.Query;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import org.lgp.Entity.InventoryItem;
+import org.lgp.Entity.InventoryItem.InventorySearchCriteria;
 import org.lgp.Entity.InventoryItem.Condition;
 import org.lgp.Entity.InventoryItem.InventoryItemRequestDTO;
 import org.lgp.Entity.InventoryItem.InventoryItemResponseDTO;
@@ -101,16 +102,18 @@ public class InventoryService {
         }
     }
 
-    public List<InventoryItemResponseDTO> searchInventory(String gameId, Status status, Condition condition) {
+    public List<InventoryItemResponseDTO> searchInventory(InventorySearchCriteria criteria) {
         try {
             Query query = firestore.collection(COLLECTION);
 
-            if (gameId != null && !gameId.isBlank()) query = query.whereEqualTo("boardgameId", gameId);
-            if (status != null) query = query.whereEqualTo("status", status.getValue());
-            if (condition != null) query = query.whereEqualTo("condition", condition.getValue());
+            if (criteria.id() != null) query = query.whereEqualTo(FieldPath.documentId(), criteria.id());
+            if (criteria.gameId() != null && !criteria.gameId().isBlank()) query = query.whereEqualTo("boardgameId", criteria.gameId());
+            if (criteria.status() != null) query = query.whereEqualTo("status", criteria.status().getValue());
+            if (criteria.condition() != null) query = query.whereEqualTo("condition", criteria.condition().getValue());
 
-            List<QueryDocumentSnapshot> docs = query.get().get().getDocuments();
-            return docs.stream().map(this::mapEntityToResponse).collect(Collectors.toList());
+            return query.get().get().getDocuments().stream()
+                    .map(this::mapEntityToResponse)
+                    .collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to search inventory", e);
         }

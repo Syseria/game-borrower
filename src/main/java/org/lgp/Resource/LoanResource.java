@@ -2,15 +2,14 @@ package org.lgp.Resource;
 
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.lgp.Entity.Loan.CreateLoanRequestDTO;
+import org.lgp.Entity.Loan.LoanSearchCriteria;
 import org.lgp.Entity.Loan.LoanResponseDTO;
-import org.lgp.Entity.Loan.ReturnLoanRequestDTO;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ValidationException;
 import org.lgp.Service.LoanService;
@@ -34,28 +33,50 @@ public class LoanResource {
     // READ
     // =========================================================================
 
+    /**
+     * Searches and filters loans based on various criteria.
+     * Enforces an ownership check: non-maintainers can only see their own loans.
+     *
+     * @param userIdParam    The user ID to filter by (Maintainer only).
+     * @param gameId         Filter by Boardgame ID.
+     * @param boxId          Filter by Inventory Item ID.
+     * @param title          Filter by Boardgame title.
+     * @param active         Filter for active loans only.
+     * @param borrowedAtStr  Filter by borrowed date (yyyy-MM-dd).
+     * @param dueAtStr       Filter by due date (yyyy-MM-dd).
+     * @param returnedAtStr  Filter by returned date (yyyy-MM-dd).
+     * @param sortBy         Field to sort the results by.
+     * @return A list of matching LoanResponseDTOs.
+     */
     @GET
-    public List<LoanResponseDTO> list(
+    public List<LoanResponseDTO> search(
             @QueryParam("userId") String userIdParam,
             @QueryParam("gameId") String gameId,
             @QueryParam("boxId") String boxId,
             @QueryParam("title") String title,
+            @QueryParam("active") @DefaultValue("false") boolean active,
             @QueryParam("borrowedAt") String borrowedAtStr,
             @QueryParam("dueAt") String dueAtStr,
             @QueryParam("returnedAt") String returnedAtStr,
-            @QueryParam("sortBy") String sortBy,
-            @QueryParam("active") @DefaultValue("false") boolean active
+            @QueryParam("sortBy") String sortBy
     ) {
+        // Security Lock: Normal users are restricted to their own UID
         String targetUserId = identity.hasRole("maintainer") ? userIdParam : identity.getPrincipal().getName();
 
-        Date borrowedAt = parseDate(borrowedAtStr);
-        Date dueAt = parseDate(dueAtStr);
-        Date returnedAt = parseDate(returnedAtStr);
+        // Build criteria using the standardised Builder pattern
+        LoanSearchCriteria criteria = LoanSearchCriteria.builder()
+                .userId(targetUserId)
+                .gameId(gameId)
+                .inventoryItemId(boxId)
+                .title(title)
+                .activeOnly(active)
+                .borrowedAt(parseDate(borrowedAtStr))
+                .dueAt(parseDate(dueAtStr))
+                .returnedAt(parseDate(returnedAtStr))
+                .sortBy(sortBy)
+                .build();
 
-        return loanService.searchLoans(
-                targetUserId, gameId, boxId, title, active,
-                borrowedAt, dueAt, returnedAt, sortBy
-        );
+        return loanService.searchLoans(criteria);
     }
 
     @GET

@@ -183,4 +183,29 @@ public class InventoryItem {
 
             String details
     ) {}
+
+    public record InventorySearchCriteria(
+            String id,
+            String gameId,
+            Status status,
+            Condition condition
+    ) {
+        public static Builder builder() { return new Builder(); }
+
+        public static class Builder {
+            private String id;
+            private String gameId;
+            private Status status;
+            private Condition condition;
+
+            public Builder id(String id) { this.id = id; return this; }
+            public Builder gameId(String gameId) { this.gameId = gameId; return this; }
+            public Builder status(Status status) { this.status = status; return this; }
+            public Builder condition(Condition condition) { this.condition = condition; return this; }
+
+            public InventorySearchCriteria build() {
+                return new InventorySearchCriteria(id, gameId, status, condition);
+            }
+        }
+    }
 }

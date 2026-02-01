@@ -28,14 +28,27 @@ public class BoardgameResource {
     // =========================================================================
 
     @GET
-    public List<BoardgameResponseDTO> getAll() { return boardgameService.searchBoardgames(BoardgameSearchCriteria.builder().build()); }
-
-    @GET
-    @Path("/{id}")
-    public List<BoardgameResponseDTO> get(@PathParam("id") String id) {
+    public List<BoardgameResponseDTO> search(
+            @QueryParam("id") String id,
+            @QueryParam("title") String title,
+            @QueryParam("publisher") String publisher,
+            @QueryParam("minPlayers") Integer minPlayers,
+            @QueryParam("maxPlayers") Integer maxPlayers,
+            @QueryParam("minAge") Integer minAge,
+            @QueryParam("minTime") Integer minTime,
+            @QueryParam("hasVideo") Boolean hasVideo
+    ) {
         BoardgameSearchCriteria criteria = BoardgameSearchCriteria.builder()
                 .id(id)
+                .title(title)
+                .publisher(publisher)
+                .minPlayers(minPlayers)
+                .maxPlayers(maxPlayers)
+                .minAge(minAge)
+                .minTime(minTime)
+                .hasVideo(hasVideo)
                 .build();
+
         return boardgameService.searchBoardgames(criteria);
     }
 
