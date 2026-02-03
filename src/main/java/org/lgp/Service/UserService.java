@@ -7,15 +7,8 @@ import com.google.firebase.auth.UserRecord;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import org.lgp.DTO.LoanSearchCriteria;
+import org.lgp.DTO.*;
 import org.lgp.Entity.User;
-import org.lgp.DTO.UserProfileResponseDTO;
-import org.lgp.DTO.UserSearchCriteria;
-import org.lgp.DTO.RegisterRequestDTO;
-import org.lgp.DTO.UpdateProfileRequestDTO;
-import org.lgp.DTO.UpdateEmailRequestDTO;
-import org.lgp.DTO.UpdatePasswordRequestDTO;
-import org.lgp.DTO.UpdateRolesRequestDTO;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
 import java.util.List;
@@ -79,7 +72,7 @@ public class UserService {
         }
     }
 
-    public List<UserProfileResponseDTO> searchUsers(UserSearchCriteria criteria) {
+    public PageResponse<UserProfileResponseDTO> searchUsers(UserSearchCriteria criteria) {
         try {
             Query query = firestore.collection(COLLECTION);
 
@@ -99,19 +92,35 @@ public class UserService {
 
             // Pagination Logic
             int limit = criteria.pageSize() != null ? criteria.pageSize() : 20;
+            int hasMoreLimit = limit + 1;
 
             if (criteria.isPrevious() && criteria.firstId() != null) {
                 DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.firstId()).get().get();
-                query = query.endBefore(cursor).limitToLast(limit);
+                query = query.endBefore(cursor).limitToLast(hasMoreLimit);
             } else if (criteria.lastId() != null) {
                 DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.lastId()).get().get();
-                query = query.startAfter(cursor).limit(limit);
+                query = query.startAfter(cursor).limit(hasMoreLimit);
             } else {
-                query = query.limit(limit);
+                query = query.limit(hasMoreLimit);
             }
 
-            return query.get().get().getDocuments().stream()
-                    .map(this::mapEntityToResponse).collect(Collectors.toList());
+            List<QueryDocumentSnapshot> docs = query.get().get().getDocuments();
+            boolean hasMore = docs.size() > limit;
+
+            // If we found the extra, remove it from the results shown to user
+            List<QueryDocumentSnapshot> resultDocs = hasMore
+                    ? (criteria.isPrevious() ? docs.subList(1, docs.size()) : docs.subList(0, limit))
+                    : docs;
+
+            List<UserProfileResponseDTO> data = resultDocs.stream()
+                    .map(this::mapEntityToResponse).toList();
+
+            return new PageResponse<>(
+                    data,
+                    resultDocs.isEmpty() ? null : resultDocs.getFirst().getId(),
+                    resultDocs.isEmpty() ? null : resultDocs.getLast().getId(),
+                    hasMore
+            );
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("User search failed", e);
         }
@@ -238,9 +247,9 @@ public class UserService {
 
             var activeLoans = loanService.searchLoans(criteria);
 
-            if (!activeLoans.isEmpty()) {
+            if (!activeLoans.data().isEmpty()) {
                 throw new org.lgp.Exception.ConflictException("user-has-active-loans",
-                        "Cannot delete user: " + activeLoans.size() + " loans are still active.");
+                        "Cannot delete user: " + activeLoans.data().size() + " loans are still active.");
             }
 
             // Proceed with deletion if no active loans

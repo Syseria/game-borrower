@@ -1,5 +1,6 @@
 package org.lgp.Resource;
 
+import com.google.api.Page;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -10,6 +11,7 @@ import jakarta.ws.rs.core.Response;
 import org.lgp.DTO.BoardgameSearchCriteria;
 import org.lgp.DTO.BoardgameRequestDTO;
 import org.lgp.DTO.BoardgameResponseDTO;
+import org.lgp.DTO.PageResponse;
 import org.lgp.Service.BoardgameService;
 import java.net.URI;
 import java.util.List;
@@ -28,7 +30,7 @@ public class BoardgameResource {
     // =========================================================================
 
     @GET
-    public List<BoardgameResponseDTO> search(
+    public PageResponse<BoardgameResponseDTO> search(
             // Filtering
             @QueryParam("id") String id,
             @QueryParam("title") String title,

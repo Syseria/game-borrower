@@ -1,16 +1,10 @@
 package org.lgp.Service;
 
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.FieldPath;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.Query;
+import com.google.cloud.firestore.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.lgp.DTO.BoardgameSearchCriteria;
+import org.lgp.DTO.*;
 import org.lgp.Entity.Boardgame;
-import org.lgp.DTO.BoardgameRequestDTO;
-import org.lgp.DTO.BoardgameResponseDTO;
-import org.lgp.DTO.InventorySearchCriteria;
 import org.lgp.Exception.ServiceException;
 import org.lgp.Exception.ResourceNotFoundException;
 import java.util.List;
@@ -41,7 +35,7 @@ public class BoardgameService {
         }
     }
 
-    public List<BoardgameResponseDTO> searchBoardgames(BoardgameSearchCriteria criteria) {
+    public PageResponse<BoardgameResponseDTO> searchBoardgames(BoardgameSearchCriteria criteria) {
         try {
             Query query = firestore.collection(COLLECTION);
 
@@ -64,22 +58,38 @@ public class BoardgameService {
 
             // Pagination
             int limit = criteria.pageSize() != null ? criteria.pageSize() : 20;
+            int hasMoreLimit = limit + 1;
 
             // Case 1: We are asking for a previous page
             if (criteria.isPrevious() && criteria.firstId() != null) {
                 DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.firstId()).get().get();
-                query = query.endBefore(cursor).limitToLast(limit);
+                query = query.endBefore(cursor).limitToLast(hasMoreLimit);
             // Case 2: We are asking for a next page
             } else if (criteria.lastId() != null) {
                 DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.lastId()).get().get();
-                query = query.startAfter(cursor).limit(limit);
+                query = query.startAfter(cursor).limit(hasMoreLimit);
             // Case 3: First load / reset of the sorting
             } else {
-                query = query.limit(limit);
+                query = query.limit(hasMoreLimit);
             }
 
-            return query.get().get().getDocuments().stream()
-                    .map(this::mapEntityToResponse).collect(Collectors.toList());
+            List<QueryDocumentSnapshot> docs = query.get().get().getDocuments();
+            boolean hasMore = docs.size() > limit;
+
+            // If we found the extra, remove it from the results shown to user
+            List<QueryDocumentSnapshot> resultDocs = hasMore
+                    ? (criteria.isPrevious() ? docs.subList(1, docs.size()) : docs.subList(0, limit))
+                    : docs;
+
+            List<BoardgameResponseDTO> data = resultDocs.stream()
+                    .map(this::mapEntityToResponse).toList();
+
+            return new PageResponse<>(
+                    data,
+                    resultDocs.isEmpty() ? null : resultDocs.getFirst().getId(),
+                    resultDocs.isEmpty() ? null : resultDocs.getLast().getId(),
+                    hasMore
+            );
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Boardgame search failed", e);
         }
@@ -111,9 +121,9 @@ public class BoardgameService {
 
             var inventoryItems = inventoryService.searchInventory(criteria);
 
-            if (!inventoryItems.isEmpty()) {
+            if (!inventoryItems.data().isEmpty()) {
                 throw new org.lgp.Exception.ConflictException("game-has-inventory",
-                        "Cannot delete game: " + inventoryItems.size() + " items still exist in inventory.");
+                        "Cannot delete game: " + inventoryItems.data().size() + " items still exist in inventory.");
             }
 
             firestore.collection(COLLECTION).document(id).delete().get();

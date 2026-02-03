@@ -8,13 +8,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.lgp.DTO.UserSearchCriteria;
+import org.lgp.DTO.*;
 import org.lgp.Entity.User;
-import org.lgp.DTO.UpdateProfileRequestDTO;
-import org.lgp.DTO.UpdateEmailRequestDTO;
-import org.lgp.DTO.UpdatePasswordRequestDTO;
-import org.lgp.DTO.UserProfileResponseDTO;
-import org.lgp.DTO.UpdateRolesRequestDTO;
 import org.lgp.Exception.ErrorResponse;
 import org.lgp.Service.UserService;
 import java.util.List;
@@ -41,7 +36,7 @@ public class UserResource {
         UserSearchCriteria criteria = UserSearchCriteria.builder()
                 .id(identity.getPrincipal().getName())
                 .build();
-        return userService.searchUsers(criteria).getFirst();
+        return userService.searchUsers(criteria).data().getFirst();
     }
 
     @PATCH
@@ -74,7 +69,7 @@ public class UserResource {
 
     @GET
     @RolesAllowed("admin")
-    public List<UserProfileResponseDTO> search(
+    public PageResponse<UserProfileResponseDTO> search(
             @QueryParam("uid") String uid,
             @QueryParam("name") String name,
             @QueryParam("lname") String lname,

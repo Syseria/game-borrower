@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.Response;
 import org.lgp.DTO.CreateLoanRequestDTO;
 import org.lgp.DTO.LoanSearchCriteria;
 import org.lgp.DTO.LoanResponseDTO;
+import org.lgp.DTO.PageResponse;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ValidationException;
 import org.lgp.Service.LoanService;
@@ -49,7 +50,7 @@ public class LoanResource {
      * @return A list of matching LoanResponseDTOs.
      */
     @GET
-    public List<LoanResponseDTO> search(
+    public PageResponse<LoanResponseDTO> search(
             // Filtering
             @QueryParam("userId") String userIdParam,
             @QueryParam("gameId") String gameId,

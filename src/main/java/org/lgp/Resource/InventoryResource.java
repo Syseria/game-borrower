@@ -8,11 +8,8 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.lgp.DTO.InventoryStatusUpdateRequestDTO;
-import org.lgp.DTO.InventorySearchCriteria;
+import org.lgp.DTO.*;
 import org.lgp.Entity.InventoryItem.Condition;
-import org.lgp.DTO.InventoryItemRequestDTO;
-import org.lgp.DTO.InventoryItemResponseDTO;
 import org.lgp.Entity.InventoryItem.Status;
 import org.lgp.Service.InventoryService;
 import java.net.URI;
@@ -35,7 +32,7 @@ public class InventoryResource {
     // =========================================================================
 
     @GET
-    public List<InventoryItemResponseDTO> search(
+    public PageResponse<InventoryItemResponseDTO> search(
             @QueryParam("gameId") String gameId,
             @QueryParam("status") String status,
             @QueryParam("condition") String condition,

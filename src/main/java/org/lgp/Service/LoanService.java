@@ -5,15 +5,9 @@ import com.google.cloud.firestore.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import org.lgp.DTO.BoardgameSearchCriteria;
-import org.lgp.DTO.BoardgameResponseDTO;
+import org.lgp.DTO.*;
 import org.lgp.Entity.InventoryItem;
 import org.lgp.Entity.Loan;
-import org.lgp.DTO.LoanSearchCriteria;
-import org.lgp.DTO.CreateLoanRequestDTO;
-import org.lgp.DTO.LoanResponseDTO;
-import org.lgp.DTO.UserSearchCriteria;
-import org.lgp.DTO.UserProfileResponseDTO;
 import org.lgp.Exception.ConflictException;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
@@ -48,7 +42,7 @@ public class LoanService {
                 UserSearchCriteria userCriteria = UserSearchCriteria.builder()
                         .id(request.userId())
                         .build();
-                List<UserProfileResponseDTO> users = userService.searchUsers(userCriteria);
+                List<UserProfileResponseDTO> users = userService.searchUsers(userCriteria).data();
                 if (users.isEmpty()) {
                     throw new ResourceNotFoundException("User not found: " + request.userId());
                 }
@@ -71,11 +65,11 @@ public class LoanService {
                 BoardgameSearchCriteria bgCriteria = BoardgameSearchCriteria.builder()
                         .id(item.getBoardgameId())
                         .build();
-                List<BoardgameResponseDTO> games = boardgameService.searchBoardgames(bgCriteria);
-                if (games.isEmpty()) {
+                PageResponse<BoardgameResponseDTO> games = boardgameService.searchBoardgames(bgCriteria);
+                if (games.data().isEmpty()) {
                     throw new ResourceNotFoundException("Boardgame not found: " + item.getBoardgameId());
                 }
-                BoardgameResponseDTO game = games.getFirst();
+                BoardgameResponseDTO game = games.data().getFirst();
 
                 // --- STEP 2: WRITES ---
 
@@ -146,7 +140,7 @@ public class LoanService {
         }
     }
 
-    public List<LoanResponseDTO> searchLoans(LoanSearchCriteria criteria) {
+    public PageResponse<LoanResponseDTO> searchLoans(LoanSearchCriteria criteria) {
         try {
             Query query = firestore.collection(COLLECTION);
 
@@ -169,20 +163,35 @@ public class LoanService {
             query = query.orderBy(field, dir).orderBy(FieldPath.documentId(), dir);
 
             int limit = criteria.pageSize() != null ? criteria.pageSize() : 20;
+            int hasMoreLimit = limit + 1;
 
             if (criteria.isPrevious() && criteria.firstId() != null) {
                 DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.firstId()).get().get();
-                query = query.endBefore(cursor).limitToLast(limit);
+                query = query.endBefore(cursor).limitToLast(hasMoreLimit);
             } else if (criteria.lastId() != null) {
                 DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.lastId()).get().get();
-                query = query.startAfter(cursor).limit(limit);
+                query = query.startAfter(cursor).limit(hasMoreLimit);
             } else {
-                query = query.limit(limit);
+                query = query.limit(hasMoreLimit);
             }
 
-            return query.get().get().getDocuments().stream()
-                    .map(this::mapEntityToResponse)
-                    .collect(Collectors.toList());
+            List<QueryDocumentSnapshot> docs = query.get().get().getDocuments();
+            boolean hasMore = docs.size() > limit;
+
+            // If we found the extra, remove it from the results shown to user
+            List<QueryDocumentSnapshot> resultDocs = hasMore
+                    ? (criteria.isPrevious() ? docs.subList(1, docs.size()) : docs.subList(0, limit))
+                    : docs;
+
+            List<LoanResponseDTO> data = resultDocs.stream()
+                    .map(this::mapEntityToResponse).toList();
+
+            return new PageResponse<>(
+                    data,
+                    resultDocs.isEmpty() ? null : resultDocs.getFirst().getId(),
+                    resultDocs.isEmpty() ? null : resultDocs.getLast().getId(),
+                    hasMore
+            );
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Search failed", e);
         }

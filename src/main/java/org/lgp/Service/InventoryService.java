@@ -1,17 +1,12 @@
 package org.lgp.Service;
 
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.FieldPath;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.Query;
+import com.google.cloud.firestore.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import org.lgp.DTO.*;
 import org.lgp.Entity.InventoryItem;
-import org.lgp.DTO.InventorySearchCriteria;
 import org.lgp.Entity.InventoryItem.Condition;
-import org.lgp.DTO.InventoryItemRequestDTO;
-import org.lgp.DTO.InventoryItemResponseDTO;
 import org.lgp.Entity.InventoryItem.Status;
 import org.lgp.Exception.ConflictException;
 import org.lgp.Exception.ResourceNotFoundException;
@@ -102,7 +97,7 @@ public class InventoryService {
         }
     }
 
-    public List<InventoryItemResponseDTO> searchInventory(InventorySearchCriteria criteria) {
+    public PageResponse<InventoryItemResponseDTO> searchInventory(InventorySearchCriteria criteria) {
         try {
             Query query = firestore.collection(COLLECTION);
 
@@ -120,20 +115,35 @@ public class InventoryService {
 
             // Pagination
             int limit = criteria.pageSize() != null ? criteria.pageSize() : 20;
+            int hasMoreLimit = limit + 1;
 
             if (criteria.isPrevious() && criteria.firstId() != null) {
                 DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.firstId()).get().get();
-                query = query.endBefore(cursor).limitToLast(limit);
+                query = query.endBefore(cursor).limitToLast(hasMoreLimit);
             } else if (criteria.lastId() != null) {
                 DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.lastId()).get().get();
-                query = query.startAfter(cursor).limit(limit);
+                query = query.startAfter(cursor).limit(hasMoreLimit);
             } else {
-                query = query.limit(limit);
+                query = query.limit(hasMoreLimit);
             }
 
-            return query.get().get().getDocuments().stream()
-                    .map(this::mapEntityToResponse)
-                    .collect(Collectors.toList());
+            List<QueryDocumentSnapshot> docs = query.get().get().getDocuments();
+            boolean hasMore = docs.size() > limit;
+
+            // If we found the extra, remove it from the results shown to user
+            List<QueryDocumentSnapshot> resultDocs = hasMore
+                    ? (criteria.isPrevious() ? docs.subList(1, docs.size()) : docs.subList(0, limit))
+                    : docs;
+
+            List<InventoryItemResponseDTO> data = resultDocs.stream()
+                    .map(this::mapEntityToResponse).toList();
+
+            return new PageResponse<>(
+                    data,
+                    resultDocs.isEmpty() ? null : resultDocs.getFirst().getId(),
+                    resultDocs.isEmpty() ? null : resultDocs.getLast().getId(),
+                    hasMore
+            );
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to search inventory", e);
         }
