@@ -111,6 +111,26 @@ public class InventoryService {
             if (criteria.status() != null) query = query.whereEqualTo("status", criteria.status().getValue());
             if (criteria.condition() != null) query = query.whereEqualTo("condition", criteria.condition().getValue());
 
+            // Dynamic Sort
+            String field = criteria.sortField() != null ? criteria.sortField() : "boardgameTitle";
+            Query.Direction dir = "desc".equalsIgnoreCase(criteria.sortDir()) ?
+                    Query.Direction.DESCENDING : Query.Direction.ASCENDING;
+
+            query = query.orderBy(field, dir).orderBy(FieldPath.documentId(), dir);
+
+            // Pagination
+            int limit = criteria.pageSize() != null ? criteria.pageSize() : 20;
+
+            if (criteria.isPrevious() && criteria.firstId() != null) {
+                DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.firstId()).get().get();
+                query = query.endBefore(cursor).limitToLast(limit);
+            } else if (criteria.lastId() != null) {
+                DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.lastId()).get().get();
+                query = query.startAfter(cursor).limit(limit);
+            } else {
+                query = query.limit(limit);
+            }
+
             return query.get().get().getDocuments().stream()
                     .map(this::mapEntityToResponse)
                     .collect(Collectors.toList());

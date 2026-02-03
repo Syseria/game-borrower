@@ -158,12 +158,27 @@ public class LoanService {
 
             // Handle Date Range filters
             if (criteria.borrowedAt() != null) query = addDayRangeFilter(query, "borrowedAt", criteria.borrowedAt());
-            else if (criteria.dueAt() != null) query = addDayRangeFilter(query, "dueAt", criteria.dueAt());
-            else if (criteria.returnedAt() != null) query = addDayRangeFilter(query, "returnedAt", criteria.returnedAt());
+            if (criteria.dueAt() != null) query = addDayRangeFilter(query, "dueAt", criteria.dueAt());
+            if (criteria.returnedAt() != null) query = addDayRangeFilter(query, "returnedAt", criteria.returnedAt());
 
-            // Sorting
-            String sortField = (criteria.sortBy() != null && !criteria.sortBy().isBlank()) ? criteria.sortBy() : "borrowedAt";
-            query = query.orderBy(sortField, Query.Direction.DESCENDING);
+            // Dynamic Sort
+            String field = criteria.sortField() != null ? criteria.sortField() : "borrowedAt";
+            Query.Direction dir = "asc".equalsIgnoreCase(criteria.sortDir()) ?
+                    Query.Direction.ASCENDING : Query.Direction.DESCENDING;
+
+            query = query.orderBy(field, dir).orderBy(FieldPath.documentId(), dir);
+
+            int limit = criteria.pageSize() != null ? criteria.pageSize() : 20;
+
+            if (criteria.isPrevious() && criteria.firstId() != null) {
+                DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.firstId()).get().get();
+                query = query.endBefore(cursor).limitToLast(limit);
+            } else if (criteria.lastId() != null) {
+                DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.lastId()).get().get();
+                query = query.startAfter(cursor).limit(limit);
+            } else {
+                query = query.limit(limit);
+            }
 
             return query.get().get().getDocuments().stream()
                     .map(this::mapEntityToResponse)

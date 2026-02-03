@@ -34,6 +34,9 @@ public class UserService {
     FirebaseAuth firebaseAuth;
 
     @Inject
+    LoanService loanService;
+
+    @Inject
     Logger logger;
 
     // =========================================================================
@@ -84,6 +87,27 @@ public class UserService {
             if (criteria.lname() != null) query = query.whereEqualTo("lname", criteria.lname());
             if (criteria.email() != null) query = query.whereEqualTo("email", criteria.email());
             if (criteria.role() != null) query = query.whereArrayContains("roles", criteria.role().getValue());
+
+            // Dynamic Sort
+            String field = criteria.sortField() != null ? criteria.sortField() : "name";
+            Query.Direction dir = "desc".equalsIgnoreCase(criteria.sortDir()) ?
+                    Query.Direction.DESCENDING : Query.Direction.ASCENDING;
+
+            // Secondary sort by Document ID is mandatory for stable pagination
+            query = query.orderBy(field, dir).orderBy(FieldPath.documentId(), dir);
+
+            // Pagination Logic
+            int limit = criteria.pageSize() != null ? criteria.pageSize() : 20;
+
+            if (criteria.isPrevious() && criteria.firstId() != null) {
+                DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.firstId()).get().get();
+                query = query.endBefore(cursor).limitToLast(limit);
+            } else if (criteria.lastId() != null) {
+                DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.lastId()).get().get();
+                query = query.startAfter(cursor).limit(limit);
+            } else {
+                query = query.limit(limit);
+            }
 
             return query.get().get().getDocuments().stream()
                     .map(this::mapEntityToResponse).collect(Collectors.toList());
@@ -198,15 +222,33 @@ public class UserService {
         }
     }
 
+    /**
+     * Deletes a user profile and their authentication record.
+     * Enforced Rule: Cannot delete a user who has active loans.
+     * @param uid The unique ID of the user to delete.
+     */
     public void deleteUser(String uid) {
         try {
-            // TODO: Check if user has active Loans
+            // Check for active loans linked to this userId
+            org.lgp.Entity.Loan.LoanSearchCriteria criteria = org.lgp.Entity.Loan.LoanSearchCriteria.builder()
+                    .userId(uid)
+                    .activeOnly(true)
+                    .build();
+
+            var activeLoans = loanService.searchLoans(criteria);
+
+            if (!activeLoans.isEmpty()) {
+                throw new org.lgp.Exception.ConflictException("user-has-active-loans",
+                        "Cannot delete user: " + activeLoans.size() + " loans are still active.");
+            }
+
+            // Proceed with deletion if no active loans
             firestore.collection(COLLECTION).document(uid).delete().get();
             try {
                 firebaseAuth.deleteUser(uid);
             } catch (FirebaseAuthException e) {
                 logger.error("Failed to delete Firebase Auth user after Firestore deletion: " + uid, e);
-                throw new ServiceException("Partial deletion failure", e);
+                throw new ServiceException("Partial deletion failure: Profile removed, but Auth account remains.", e);
             }
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to delete user", e);

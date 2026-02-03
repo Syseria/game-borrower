@@ -29,6 +29,7 @@ public class BoardgameResource {
 
     @GET
     public List<BoardgameResponseDTO> search(
+            // Filtering
             @QueryParam("id") String id,
             @QueryParam("title") String title,
             @QueryParam("publisher") String publisher,
@@ -36,7 +37,15 @@ public class BoardgameResource {
             @QueryParam("maxPlayers") Integer maxPlayers,
             @QueryParam("minAge") Integer minAge,
             @QueryParam("minTime") Integer minTime,
-            @QueryParam("hasVideo") Boolean hasVideo
+            @QueryParam("hasVideo") Boolean hasVideo,
+
+            // Sorting
+            @QueryParam("sortBy") @DefaultValue("title") String sortBy,
+            @QueryParam("sortDir") @DefaultValue("asc") String sortDir,
+            @QueryParam("pageSize") @DefaultValue("20") Integer pageSize,
+            @QueryParam("firstId") String firstId,
+            @QueryParam("lastId") String lastId,
+            @QueryParam("isPrevious") @DefaultValue("false") boolean isPrevious
     ) {
         BoardgameSearchCriteria criteria = BoardgameSearchCriteria.builder()
                 .id(id)
@@ -47,6 +56,12 @@ public class BoardgameResource {
                 .minAge(minAge)
                 .minTime(minTime)
                 .hasVideo(hasVideo)
+                .sortField(sortBy)
+                .sortDir(sortDir)
+                .pageSize(pageSize)
+                .firstId(firstId)
+                .lastId(lastId)
+                .isPrevious(isPrevious)
                 .build();
 
         return boardgameService.searchBoardgames(criteria);

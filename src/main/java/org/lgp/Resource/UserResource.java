@@ -78,7 +78,15 @@ public class UserResource {
             @QueryParam("name") String name,
             @QueryParam("lname") String lname,
             @QueryParam("email") String email,
-            @QueryParam("role") String roleStr
+            @QueryParam("role") String roleStr,
+
+            // Sorting
+            @QueryParam("sortBy") @DefaultValue("lname") String sortBy,
+            @QueryParam("sortDir") @DefaultValue("asc") String sortDir,
+            @QueryParam("pageSize") @DefaultValue("20") Integer pageSize,
+            @QueryParam("firstId") String firstId,
+            @QueryParam("lastId") String lastId,
+            @QueryParam("isPrevious") @DefaultValue("false") boolean isPrevious
     ) {
         User.Role role = (roleStr != null) ? User.Role.fromString(roleStr) : null;
         User.UserSearchCriteria criteria = User.UserSearchCriteria.builder()
@@ -87,6 +95,12 @@ public class UserResource {
                 .lname(lname)
                 .email(email)
                 .role(role)
+                .sortField(sortBy)
+                .sortDir(sortDir)
+                .pageSize(pageSize)
+                .firstId(firstId)
+                .lastId(lastId)
+                .isPrevious(isPrevious)
                 .build();
 
         return userService.searchUsers(criteria);

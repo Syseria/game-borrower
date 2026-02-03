@@ -50,6 +50,7 @@ public class LoanResource {
      */
     @GET
     public List<LoanResponseDTO> search(
+            // Filtering
             @QueryParam("userId") String userIdParam,
             @QueryParam("gameId") String gameId,
             @QueryParam("boxId") String boxId,
@@ -58,7 +59,14 @@ public class LoanResource {
             @QueryParam("borrowedAt") String borrowedAtStr,
             @QueryParam("dueAt") String dueAtStr,
             @QueryParam("returnedAt") String returnedAtStr,
-            @QueryParam("sortBy") String sortBy
+
+            // Sorting
+            @QueryParam("sortBy") @DefaultValue("title") String sortBy,
+            @QueryParam("sortDir") @DefaultValue("asc") String sortDir,
+            @QueryParam("pageSize") @DefaultValue("20") Integer pageSize,
+            @QueryParam("firstId") String firstId,
+            @QueryParam("lastId") String lastId,
+            @QueryParam("isPrevious") @DefaultValue("false") boolean isPrevious
     ) {
         // Security Lock: Normal users are restricted to their own UID
         String targetUserId = identity.hasRole("maintainer") ? userIdParam : identity.getPrincipal().getName();
@@ -73,7 +81,12 @@ public class LoanResource {
                 .borrowedAt(parseDate(borrowedAtStr))
                 .dueAt(parseDate(dueAtStr))
                 .returnedAt(parseDate(returnedAtStr))
-                .sortBy(sortBy)
+                .sortField(sortBy)
+                .sortDir(sortDir)
+                .pageSize(pageSize)
+                .firstId(firstId)
+                .lastId(lastId)
+                .isPrevious(isPrevious)
                 .build();
 
         return loanService.searchLoans(criteria);

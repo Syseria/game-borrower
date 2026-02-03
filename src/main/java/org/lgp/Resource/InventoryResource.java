@@ -38,7 +38,15 @@ public class InventoryResource {
     public List<InventoryItemResponseDTO> search(
             @QueryParam("gameId") String gameId,
             @QueryParam("status") String status,
-            @QueryParam("condition") String condition
+            @QueryParam("condition") String condition,
+
+            // Sorting
+            @QueryParam("sortBy") @DefaultValue("gameId") String sortBy,
+            @QueryParam("sortDir") @DefaultValue("asc") String sortdir,
+            @QueryParam("pageSize") @DefaultValue("20") Integer pageSize,
+            @QueryParam("firstId") String firstId,
+            @QueryParam("lastId") String lastId,
+            @QueryParam("isPrevious") @DefaultValue("false") boolean isPrevious
     ) {
         Status requestedStatus = (status != null) ? Status.fromString(status) : null;
         Condition requestedCondition = (condition != null) ? Condition.fromString(condition) : null;
@@ -51,6 +59,12 @@ public class InventoryResource {
                 .gameId(gameId)
                 .status(requestedStatus)
                 .condition(requestedCondition)
+                .sortField(sortBy)
+                .sortDir(sortdir)
+                .pageSize(pageSize)
+                .firstId(firstId)
+                .lastId(lastId)
+                .isPrevious(isPrevious)
                 .build();
 
         return inventoryService.searchInventory(criteria);

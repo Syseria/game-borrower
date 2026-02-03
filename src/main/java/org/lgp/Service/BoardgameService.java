@@ -1,6 +1,7 @@
 package org.lgp.Service;
 
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.FieldPath;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -8,6 +9,7 @@ import jakarta.inject.Inject;
 import org.lgp.Entity.Boardgame;
 import org.lgp.Entity.Boardgame.BoardgameRequestDTO;
 import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
+import org.lgp.Entity.InventoryItem.InventorySearchCriteria;
 import org.lgp.Exception.ServiceException;
 import org.lgp.Exception.ResourceNotFoundException;
 import java.util.List;
@@ -18,6 +20,9 @@ import java.util.stream.Collectors;
 public class BoardgameService {
 
     private static final String COLLECTION = "boardgames";
+
+    @Inject
+    InventoryService inventoryService;
 
     @Inject
     Firestore firestore;
@@ -48,6 +53,30 @@ public class BoardgameService {
             if (criteria.minTime() != null) query = query.whereGreaterThanOrEqualTo("minTime", criteria.minTime());
             if (criteria.hasVideo() != null && criteria.hasVideo()) query = query.whereNotEqualTo("videoUrl", null);
 
+            // Dynamic Sort
+            String field = criteria.sortField() != null ? criteria.sortField() : "title";
+            Query.Direction dir = "desc".equalsIgnoreCase(criteria.sortDir()) ?
+                    Query.Direction.DESCENDING : Query.Direction.ASCENDING;
+            // Always secondary sort by ID for cursor stability
+            query = query.orderBy(field, dir).orderBy(FieldPath.documentId(), dir);
+
+
+            // Pagination
+            int limit = criteria.pageSize() != null ? criteria.pageSize() : 20;
+
+            // Case 1: We are asking for a previous page
+            if (criteria.isPrevious() && criteria.firstId() != null) {
+                DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.firstId()).get().get();
+                query = query.endBefore(cursor).limitToLast(limit);
+            // Case 2: We are asking for a next page
+            } else if (criteria.lastId() != null) {
+                DocumentSnapshot cursor = firestore.collection(COLLECTION).document(criteria.lastId()).get().get();
+                query = query.startAfter(cursor).limit(limit);
+            // Case 3: First load / reset of the sorting
+            } else {
+                query = query.limit(limit);
+            }
+
             return query.get().get().getDocuments().stream()
                     .map(this::mapEntityToResponse).collect(Collectors.toList());
         } catch (InterruptedException | ExecutionException e) {
@@ -67,10 +96,25 @@ public class BoardgameService {
         }
     }
 
+    /**
+     * Deletes a board game from the catalog.
+     * Enforced Rule: Cannot delete a game if physical items exist in the inventory.
+     * @param id The ID of the board game to delete.
+     */
     public void deleteBoardgame(String id) {
         try {
-            /// TODO: Check InventoryService before deleting
-            // if (hasItems) throw new ConflictException("game-has-inventory", "Cannot delete game with active inventory");
+            // Check if any inventory item is linked to this boardgameId
+            InventorySearchCriteria criteria = InventorySearchCriteria.builder()
+                    .gameId(id)
+                    .build();
+
+            var inventoryItems = inventoryService.searchInventory(criteria);
+
+            if (!inventoryItems.isEmpty()) {
+                throw new org.lgp.Exception.ConflictException("game-has-inventory",
+                        "Cannot delete game: " + inventoryItems.size() + " items still exist in inventory.");
+            }
+
             firestore.collection(COLLECTION).document(id).delete().get();
         } catch (InterruptedException | ExecutionException e) {
             throw new ServiceException("Failed to delete boardgame " + id, e);
@@ -81,6 +125,11 @@ public class BoardgameService {
     // PRIVATE HELPERS
     // =========================================================================
 
+    /**
+     * Converts a Firestore reading to a Boardgame entity.
+     * @param req DTO of the Firestore reading
+     * @return Boardgame Object
+     */
     private Boardgame mapRequestToEntity(BoardgameRequestDTO req) {
         Boardgame bg = new Boardgame();
         bg.setTitle(req.title());
@@ -96,6 +145,11 @@ public class BoardgameService {
         return bg;
     }
 
+    /**
+     * Allows the mapping of an Entity to a DTO to easily save it to the Firestore DB.
+     * @param doc Firestore snapshot
+     * @return Boardgame.BoardgameResponseDTO
+     */
     private BoardgameResponseDTO mapEntityToResponse(DocumentSnapshot doc) {
         Boardgame bg = doc.toObject(Boardgame.class);
         if (bg == null) return null;
