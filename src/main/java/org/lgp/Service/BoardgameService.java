@@ -6,10 +6,11 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.lgp.DTO.BoardgameSearchCriteria;
 import org.lgp.Entity.Boardgame;
-import org.lgp.Entity.Boardgame.BoardgameRequestDTO;
-import org.lgp.Entity.Boardgame.BoardgameResponseDTO;
-import org.lgp.Entity.InventoryItem.InventorySearchCriteria;
+import org.lgp.DTO.BoardgameRequestDTO;
+import org.lgp.DTO.BoardgameResponseDTO;
+import org.lgp.DTO.InventorySearchCriteria;
 import org.lgp.Exception.ServiceException;
 import org.lgp.Exception.ResourceNotFoundException;
 import java.util.List;
@@ -40,7 +41,7 @@ public class BoardgameService {
         }
     }
 
-    public List<BoardgameResponseDTO> searchBoardgames(Boardgame.BoardgameSearchCriteria criteria) {
+    public List<BoardgameResponseDTO> searchBoardgames(BoardgameSearchCriteria criteria) {
         try {
             Query query = firestore.collection(COLLECTION);
 

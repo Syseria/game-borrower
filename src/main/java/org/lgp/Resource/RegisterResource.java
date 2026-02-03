@@ -8,7 +8,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.lgp.Entity.User;
+import org.lgp.DTO.RegisterRequestDTO;
 import org.lgp.Service.UserService;
 
 @Path("/register")
@@ -24,7 +24,7 @@ public class RegisterResource {
     // =========================================================================
 
     @POST
-    public Response register(User.RegisterRequestDTO request) throws FirebaseAuthException {
+    public Response register(RegisterRequestDTO request) throws FirebaseAuthException {
         String uid = userService.registerUser(request);
         return Response.ok(uid).build();
     }

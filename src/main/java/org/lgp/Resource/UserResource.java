@@ -8,12 +8,13 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.lgp.DTO.UserSearchCriteria;
 import org.lgp.Entity.User;
-import org.lgp.Entity.User.UpdateProfileRequestDTO;
-import org.lgp.Entity.User.UpdateEmailRequestDTO;
-import org.lgp.Entity.User.UpdatePasswordRequestDTO;
-import org.lgp.Entity.User.UserProfileResponseDTO;
-import org.lgp.Entity.User.UpdateRolesRequestDTO;
+import org.lgp.DTO.UpdateProfileRequestDTO;
+import org.lgp.DTO.UpdateEmailRequestDTO;
+import org.lgp.DTO.UpdatePasswordRequestDTO;
+import org.lgp.DTO.UserProfileResponseDTO;
+import org.lgp.DTO.UpdateRolesRequestDTO;
 import org.lgp.Exception.ErrorResponse;
 import org.lgp.Service.UserService;
 import java.util.List;
@@ -37,7 +38,7 @@ public class UserResource {
     @GET
     @Path("/profile")
     public UserProfileResponseDTO getMyProfile() {
-        User.UserSearchCriteria criteria = User.UserSearchCriteria.builder()
+        UserSearchCriteria criteria = UserSearchCriteria.builder()
                 .id(identity.getPrincipal().getName())
                 .build();
         return userService.searchUsers(criteria).getFirst();
@@ -89,7 +90,7 @@ public class UserResource {
             @QueryParam("isPrevious") @DefaultValue("false") boolean isPrevious
     ) {
         User.Role role = (roleStr != null) ? User.Role.fromString(roleStr) : null;
-        User.UserSearchCriteria criteria = User.UserSearchCriteria.builder()
+        UserSearchCriteria criteria = UserSearchCriteria.builder()
                 .id(uid)
                 .name(name)
                 .lname(lname)

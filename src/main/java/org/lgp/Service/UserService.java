@@ -7,14 +7,15 @@ import com.google.firebase.auth.UserRecord;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
+import org.lgp.DTO.LoanSearchCriteria;
 import org.lgp.Entity.User;
-import org.lgp.Entity.User.UserProfileResponseDTO;
-import org.lgp.Entity.User.UserSearchCriteria;
-import org.lgp.Entity.User.RegisterRequestDTO;
-import org.lgp.Entity.User.UpdateProfileRequestDTO;
-import org.lgp.Entity.User.UpdateEmailRequestDTO;
-import org.lgp.Entity.User.UpdatePasswordRequestDTO;
-import org.lgp.Entity.User.UpdateRolesRequestDTO;
+import org.lgp.DTO.UserProfileResponseDTO;
+import org.lgp.DTO.UserSearchCriteria;
+import org.lgp.DTO.RegisterRequestDTO;
+import org.lgp.DTO.UpdateProfileRequestDTO;
+import org.lgp.DTO.UpdateEmailRequestDTO;
+import org.lgp.DTO.UpdatePasswordRequestDTO;
+import org.lgp.DTO.UpdateRolesRequestDTO;
 import org.lgp.Exception.ResourceNotFoundException;
 import org.lgp.Exception.ServiceException;
 import java.util.List;
@@ -230,7 +231,7 @@ public class UserService {
     public void deleteUser(String uid) {
         try {
             // Check for active loans linked to this userId
-            org.lgp.Entity.Loan.LoanSearchCriteria criteria = org.lgp.Entity.Loan.LoanSearchCriteria.builder()
+            LoanSearchCriteria criteria = LoanSearchCriteria.builder()
                     .userId(uid)
                     .activeOnly(true)
                     .build();

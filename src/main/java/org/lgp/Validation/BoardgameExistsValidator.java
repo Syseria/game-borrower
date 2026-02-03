@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import org.lgp.Entity.Boardgame.BoardgameSearchCriteria;
+import org.lgp.DTO.BoardgameSearchCriteria;
 import org.lgp.Service.BoardgameService;
 
 @ApplicationScoped
