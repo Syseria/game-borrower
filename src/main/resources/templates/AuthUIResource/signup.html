@@ -1,0 +1,84 @@
+{#include base.html}
+    {#title}Join the Library{/title}
+
+    {#body}
+        <section class="section">
+            <div class="container">
+                <div class="columns is-centered">
+                    <div class="column is-5">
+                        <div class="box">
+                            <h1 class="title has-text-centered">Create Account</h1>
+                            <form id="signup-form">
+                                <div class="columns">
+                                    <div class="column">
+                                        <div class="field">
+                                            <label class="label">First Name</label>
+                                            <div class="control">
+                                                <input class="input" type="text" id="name" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="column">
+                                        <div class="field">
+                                            <label class="label">Last Name</label>
+                                            <div class="control">
+                                                <input class="input" type="text" id="lname" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="field">
+                                    <label class="label">Email</label>
+                                    <div class="control">
+                                        <input class="input" type="email" id="email" required>
+                                    </div>
+                                </div>
+
+                                <div class="field">
+                                    <label class="label">Password</label>
+                                    <div class="control">
+                                        <input class="input" type="password" id="password" required>
+                                        <p class="help">Must be at least 8 characters with a mix of types.</p>
+                                    </div>
+                                </div>
+
+                                <div class="field mt-5">
+                                    <button class="button is-link is-fullwidth" type="submit">Register</button>
+                                </div>
+                            </form>
+                            <p class="has-text-centered mt-3">
+                                Already a member? <a href="/login">Login</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <script>
+            document.getElementById('signup-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value,
+                    name: document.getElementById('name').value,
+                    lname: document.getElementById('lname').value
+                };
+
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    window.location.href = '/login';
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + error.message);
+                }
+            });
+        </script>
+    {/body}
+{/include}

@@ -1,0 +1,43 @@
+{#include base.html}
+    {#set title}Catalog - Game Borrower{/set}
+
+    {#insert body}
+        <div class="level">
+            <div class="level-left">
+                <h1 class="title">Board Game Library</h1>
+            </div>
+        </div>
+
+        <div class="columns is-multiline">
+            {#for game in page.data}
+                <div class="column is-3">
+                    <div class="card">
+                        <div class="card-image">
+                            <figure class="image is-4by3">
+                                <img src="{game.imageUrl ?: 'https://bulma.io/assets/images/placeholders/1280x960.png'}" alt="{game.title}" style="object-fit: cover;">
+                            </figure>
+                        </div>
+                        <div class="card-content">
+                            <p class="title is-5">{game.title}</p>
+                            <p class="subtitle is-6">{game.publisher}</p>
+                        </div>
+                        <footer class="card-footer">
+                            <a href="/catalog/detail/{game.id}" class="card-footer-item">View Details</a>
+                        </footer>
+                    </div>
+                </div>
+            {/for}
+        </div>
+
+        <nav class="pagination is-centered mt-6" role="navigation" aria-label="pagination">
+            {! We use page.firstId and page.lastId directly from the PageResponse DTO !}
+            <a href="/catalog?firstId={page.firstId}&isPrevious=true"
+               class="pagination-previous"
+               {#if !page.firstId}disabled onclick="return false;"{/if}>Previous</a>
+
+            <a href="/catalog?lastId={page.lastId}&isPrevious=false"
+               class="pagination-next"
+               {#if !page.hasMore}disabled onclick="return false;"{/if}>Next page</a>
+        </nav>
+    {/insert}
+{/include}

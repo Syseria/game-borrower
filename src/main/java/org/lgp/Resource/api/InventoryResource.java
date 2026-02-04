@@ -1,4 +1,4 @@
-package org.lgp.Resource;
+package org.lgp.Resource.api;
 
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -13,9 +13,8 @@ import org.lgp.Entity.InventoryItem.Condition;
 import org.lgp.Entity.InventoryItem.Status;
 import org.lgp.Service.InventoryService;
 import java.net.URI;
-import java.util.List;
 
-@Path("/inventory")
+@Path("/api/inventory")
 @Authenticated
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

@@ -1,4 +1,4 @@
-package org.lgp.Resource;
+package org.lgp.Resource.api;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.firebase.auth.FirebaseAuth;
@@ -17,7 +17,7 @@ import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 import java.util.concurrent.TimeUnit;
 
-@Path("/auth")
+@Path("/api/auth")
 public class SessionResource {
 
     @Inject

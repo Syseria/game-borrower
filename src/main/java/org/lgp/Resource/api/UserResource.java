@@ -1,4 +1,4 @@
-package org.lgp.Resource;
+package org.lgp.Resource.api;
 
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -12,9 +12,8 @@ import org.lgp.DTO.*;
 import org.lgp.Entity.User;
 import org.lgp.Exception.ErrorResponse;
 import org.lgp.Service.UserService;
-import java.util.List;
 
-@Path("/users")
+@Path("/api/users")
 @Authenticated
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

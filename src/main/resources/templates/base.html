@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 1. Bulma Navbar Burger Logic ---
+            const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+
+            // Add a click event on each of them to toggle the menu
+            if ($navbarBurgers.length > 0) {
+                $navbarBurgers.forEach( el => {
+                    el.addEventListener('click', () => {
+                        const target = el.dataset.target;
+                        const $target = document.getElementById(target);
+                        el.classList.toggle('is-active');
+                        $target.classList.toggle('is-active');
+                    });
+                });
+            }
+
+            // --- 2. Secure Logout Logic ---
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+
+                    // Visual feedback: show spinner on button
+                    logoutBtn.classList.add('is-loading');
+
+                    try {
+                        const response = await fetch('/api/auth/logout', {
+                            method: 'POST'
+                        });
+
+                        window.location.href = '/login';
+                    } catch (err) {
+                        console.error('Logout failed:', err);
+                        window.location.href = '/login';
+                    }
+                });
+            }
+        });
+    </script>
+
+    <title>{#insert title}Boardgame Library{/insert}</title>
+        {#bundle /}  {! Auto-injects web/app.js and web/app.scss !}
+</head>
+<body class="bg-gray-100" style="min-height: 100vh; display: flex; flex-direction: column;">
+
+{#insert nav}
+<nav class="navbar is-primary" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item has-text-weight-bold is-size-4" href="/">
+                GameLibrary
+            </a>
+
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMain">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+        </div>
+
+        <div id="navbarMain" class="navbar-menu">
+            <div class="navbar-start">
+                {#if !identity.isAnonymous}
+                    <a class="navbar-item" href="/catalog">Catalog</a>
+                    <a class="navbar-item" href="/loans">My Loans</a>
+
+                    {#if identity.hasRole("maintainer")}
+                        <div class="navbar-item has-dropdown is-hoverable">
+                            <a class="navbar-link">Management</a>
+                            <div class="navbar-dropdown">
+                                <a class="navbar-item" href="/admin/catalog">Manage Games</a>
+                                <a class="navbar-item" href="/admin/inventory">Inventory</a>
+                                {#if identity.hasRole("admin")}
+                                    <hr class="navbar-divider">
+                                    <a class="navbar-item" href="/admin/users">User Accounts</a>
+                                {/if}
+                            </div>
+                        </div>
+                    {/if}
+                {/if}
+            </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <div class="buttons">
+                        {#if identity.isAnonymous}
+                            <a class="button is-light" href="/signup"><strong>Sign up</strong></a>
+                            <a class="button is-primary is-inverted" href="/login">Log in</a>
+                        {#else}
+                            <a class="button is-primary is-inverted" href="/profile">My Profile</a>
+                            <a class="button is-danger" id="logout-btn" href="">Log out</a>
+                        {/if}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+{/insert}
+
+<main class="container mx-auto p-4">
+    {#insert body}Default Content{/insert}
+</main>
+
+<footer> </footer>
+</body>
+</html>

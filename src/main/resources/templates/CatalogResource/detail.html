@@ -1,0 +1,47 @@
+{#include base.html}
+    {#set title}{game.title} - Details{/set}
+
+    {#insert body}
+        <section class="section">
+            <nav class="breadcrumb" aria-label="breadcrumbs">
+                <ul>
+                    <li><a href="/catalog">Catalog</a></li>
+                    <li class="is-active"><a href="#" aria-current="page">{game.title}</a></li>
+                </ul>
+            </nav>
+
+            <div class="columns">
+                <div class="column is-one-third">
+                    <figure class="image is-4by5">
+                        <img src="{game.imageUrl ?: 'https://bulma.io/assets/images/placeholders/1280x960.png'}" alt="{game.title} cover" style="object-fit: cover; border-radius: 8px;">
+                    </figure>
+                </div>
+
+                <div class="column">
+                    <h1 class="title is-1">{game.title}</h1>
+                    <h2 class="subtitle is-4">Published by {game.publisher}</h2>
+
+                    <div class="tags are-medium">
+                        <span class="tag is-info is-light">👥 {game.minPlayers}-{game.maxPlayers} Players</span>
+                        <span class="tag is-primary is-light">⏳ {game.minTime}-{game.maxTime} Min</span>
+                        <span class="tag is-warning is-light">🎂 Age {game.minAge}+</span>
+                    </div>
+
+                    <div class="content mt-5">
+                        <h3 class="title is-4">Description</h3>
+                        <p>{game.description}</p>
+                    </div>
+
+                    {#if game.videoUrl}
+                        <div class="box has-background-light">
+                            <h4 class="title is-5">How to Play</h4>
+                            <a href="{game.videoUrl}" target="_blank" class="button is-danger">
+                                Watch Tutorial on YouTube
+                            </a>
+                        </div>
+                    {/if}
+                </div>
+            </div>
+        </section>
+    {/insert}
+{/include}

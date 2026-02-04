@@ -1,6 +1,5 @@
-package org.lgp.Resource;
+package org.lgp.Resource.api;
 
-import com.google.api.Page;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -14,9 +13,8 @@ import org.lgp.DTO.BoardgameResponseDTO;
 import org.lgp.DTO.PageResponse;
 import org.lgp.Service.BoardgameService;
 import java.net.URI;
-import java.util.List;
 
-@Path("/games")
+@Path("/api/games")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Authenticated

@@ -1,4 +1,4 @@
-package org.lgp.Resource;
+package org.lgp.Resource.api;
 
 import com.google.firebase.auth.FirebaseAuthException;
 import jakarta.inject.Inject;
@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.Response;
 import org.lgp.DTO.RegisterRequestDTO;
 import org.lgp.Service.UserService;
 
-@Path("/register")
+@Path("/api/register")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class RegisterResource {

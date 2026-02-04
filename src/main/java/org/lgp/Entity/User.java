@@ -12,9 +12,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.lgp.Validation.StrongPassword;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RegisterForReflection
@@ -84,16 +83,16 @@ public class User {
 
     @JsonIgnore
     @PropertyName("roles")
-    public Set<String> getRolesDb() {
-        if (this.roles == null) return new HashSet<>();
+    public List<String> getRolesDb() { // Changed return type to List
+        if (this.roles == null) return new ArrayList<>();
         return this.roles.stream()
                 .map(Role::getValue)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList()); // Collect to List
     }
 
     @JsonIgnore
     @PropertyName("roles")
-    public void setRolesDb(Set<String> roleStrings) {
+    public void setRolesDb(List<String> roleStrings) { // Change parameter to List
         if (roleStrings == null) {
             this.roles = new HashSet<>();
         } else {

@@ -1,4 +1,4 @@
-package org.lgp.Resource;
+package org.lgp.Resource.api;
 
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -19,9 +19,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
-import java.util.List;
 
-@Path("/loans")
+@Path("/api/loans")
 @Authenticated
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
